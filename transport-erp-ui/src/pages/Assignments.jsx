@@ -14,6 +14,11 @@ export default function Assignments() {
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({ driverId: '', vehicleId: '', role: 'PRIMARY_DRIVER', remarks: '' });
 
+    // new states for dropdown options
+    const [drivers, setDrivers] = useState([]);
+    const [vehicles, setVehicles] = useState([]);
+    const [optionsLoading, setOptionsLoading] = useState(false);
+
     useEffect(() => { loadAssignments(); }, []);
 
     const loadAssignments = async () => {
@@ -21,6 +26,29 @@ export default function Assignments() {
             const res = await api.get('/assignments/active');
             setAssignments(res.data.data || []);
         } catch { /* handled */ } finally { setLoading(false); }
+    };
+
+    const loadOptions = async () => {
+        if (drivers.length > 0 && vehicles.length > 0) return;
+        setOptionsLoading(true);
+        try {
+            const [dRes, vRes] = await Promise.all([
+                api.get('/drivers?size=1000'),
+                api.get('/vehicles?size=1000')
+            ]);
+            setDrivers(dRes.data.data?.content || dRes.data.data || []);
+            setVehicles(vRes.data.data?.content || vRes.data.data || []);
+        } catch (error) {
+            toast.error('Failed to load drivers and vehicles. Try again.');
+        } finally {
+            setOptionsLoading(false);
+        }
+    };
+
+    const handleOpenModal = () => {
+        setForm({ driverId: '', vehicleId: '', role: 'PRIMARY_DRIVER', remarks: '' });
+        setShowModal(true);
+        loadOptions();
     };
 
     const handleSubmit = async (e) => {
@@ -54,7 +82,7 @@ export default function Assignments() {
                     <p>Map drivers to vehicles</p>
                 </div>
                 {canEdit && (
-                    <button id="create-assignment-btn" className="btn btn-primary" onClick={() => setShowModal(true)}>
+                    <button id="create-assignment-btn" className="btn btn-primary" onClick={handleOpenModal}>
                         <HiPlus size={16} /> New Assignment
                     </button>
                 )}
@@ -119,12 +147,26 @@ export default function Assignments() {
                             <form onSubmit={handleSubmit}>
                                 <div className="form-grid">
                                     <div className="form-group full-width">
-                                        <label className="form-label">Driver ID *</label>
-                                        <input className="form-input" name="driverId" value={form.driverId} onChange={onChange} required placeholder="UUID of the driver" />
+                                        <label className="form-label">Driver *</label>
+                                        <select className="form-select" name="driverId" value={form.driverId} onChange={onChange} required disabled={optionsLoading}>
+                                            <option value="">Select Driver</option>
+                                            {drivers.map(d => (
+                                                <option key={d.id} value={d.id}>
+                                                    {d.name} ({d.employeeCode || d.id.substring(0, 6)})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="form-group full-width">
-                                        <label className="form-label">Vehicle ID *</label>
-                                        <input className="form-input" name="vehicleId" value={form.vehicleId} onChange={onChange} required placeholder="UUID of the vehicle" />
+                                        <label className="form-label">Vehicle *</label>
+                                        <select className="form-select" name="vehicleId" value={form.vehicleId} onChange={onChange} required disabled={optionsLoading}>
+                                            <option value="">Select Vehicle</option>
+                                            {vehicles.map(v => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.registrationNumber} {v.make ? `(${v.make} ${v.model})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Role</label>
