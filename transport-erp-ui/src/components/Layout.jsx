@@ -81,7 +81,7 @@ export default function Layout() {
                     <div className="sidebar-logo">
                         <div className="sidebar-logo-icon">🚛</div>
                         <div className="sidebar-logo-text">
-                            <h1>Transport ERP</h1>
+                            <h1>Central Transport</h1>
                             <span>Fleet Management</span>
                         </div>
                     </div>

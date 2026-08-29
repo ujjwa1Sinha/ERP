@@ -30,6 +30,12 @@ public class VehicleController {
                 .body(ApiResponse.success("Vehicle created successfully", response));
     }
 
+    @GetMapping("/types")
+    @PreAuthorize("hasAuthority('VEHICLE_VIEW')")
+    public ResponseEntity<ApiResponse<List<String>>> getVehicleTypes() {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.getAllVehicleTypes()));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('VEHICLE_VIEW')")
     public ResponseEntity<ApiResponse<PagedResponse<VehicleResponse>>> getAllVehicles(

@@ -4,7 +4,6 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiX } from 'react-icons/hi';
 
-const types = ['TRUCK', 'TRAILER', 'BUS', 'MINI_BUS', 'TANKER', 'CONTAINER', 'TIPPER', 'OTHER'];
 const fuels = ['DIESEL', 'PETROL', 'CNG', 'ELECTRIC', 'HYBRID'];
 
 const emptyVehicle = {
@@ -18,6 +17,7 @@ export default function Vehicles() {
     const canEdit = hasPermission('VEHICLE_EDIT');
     const [vehicles, setVehicles] = useState([]);
     const [branches, setBranches] = useState([]);
+    const [vehicleTypes, setVehicleTypes] = useState(["TRUCK"]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -25,7 +25,7 @@ export default function Vehicles() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
-    useEffect(() => { loadVehicles(); loadBranches(); }, [page]);
+    useEffect(() => { loadVehicles(); loadBranches(); loadVehicleTypes(); }, [page]);
 
     const loadVehicles = async () => {
         try {
@@ -40,6 +40,13 @@ export default function Vehicles() {
         try {
             const res = await api.get('/branches');
             setBranches(res.data.data || []);
+        } catch { /* silent */ }
+    };
+
+    const loadVehicleTypes = async () => {
+        try {
+            const res = await api.get('/vehicles/types');
+            setVehicleTypes(res.data.data || []);
         } catch { /* silent */ }
     };
 
@@ -174,7 +181,7 @@ export default function Vehicles() {
                                     <div className="form-group">
                                         <label className="form-label">Vehicle Type</label>
                                         <select className="form-select" name="vehicleType" value={form.vehicleType} onChange={onChange}>
-                                            {types.map(t => <option key={t} value={t}>{t}</option>)}
+                                            {vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">

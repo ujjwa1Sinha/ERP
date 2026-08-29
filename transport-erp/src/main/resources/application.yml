@@ -18,8 +18,11 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
+    baseline-version: 2
+    repair-on-migrate: true
+    out-of-order: false
     locations: classpath:db/migration
 
   # Redis disabled for local development (no Redis installed)

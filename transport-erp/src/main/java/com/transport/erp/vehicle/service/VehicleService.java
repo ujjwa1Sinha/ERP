@@ -9,6 +9,7 @@ import com.transport.erp.vehicle.domain.*;
 import com.transport.erp.vehicle.dto.VehicleRequest;
 import com.transport.erp.vehicle.dto.VehicleResponse;
 import com.transport.erp.vehicle.repository.VehicleRepository;
+import com.transport.erp.vehicle.repository.VehicleTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final BranchRepository branchRepository;
+    private final VehicleTypeRepository vehicleTypeRepository;
 
     @Transactional
     public VehicleResponse createVehicle(VehicleRequest request) {
@@ -34,9 +36,12 @@ public class VehicleService {
             throw new DuplicateResourceException("Vehicle", "registrationNumber", request.getRegistrationNumber());
         }
 
+        VehicleType type = vehicleTypeRepository.findByName(request.getVehicleType().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("VehicleType", "name", request.getVehicleType()));
+
         Vehicle vehicle = Vehicle.builder()
                 .registrationNumber(request.getRegistrationNumber().toUpperCase().trim())
-                .vehicleType(VehicleType.valueOf(request.getVehicleType().toUpperCase()))
+                .vehicleType(type)
                 .make(request.getMake())
                 .model(request.getModel())
                 .year(request.getYear())
@@ -97,8 +102,11 @@ public class VehicleService {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", id));
 
+        VehicleType type = vehicleTypeRepository.findByName(request.getVehicleType().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("VehicleType", "name", request.getVehicleType()));
+
         vehicle.setRegistrationNumber(request.getRegistrationNumber().toUpperCase().trim());
-        vehicle.setVehicleType(VehicleType.valueOf(request.getVehicleType().toUpperCase()));
+        vehicle.setVehicleType(type);
         vehicle.setMake(request.getMake());
         vehicle.setModel(request.getModel());
         vehicle.setYear(request.getYear());
@@ -135,11 +143,18 @@ public class VehicleService {
         vehicleRepository.save(vehicle);
     }
 
+    @Transactional(readOnly = true)
+    public List<String> getAllVehicleTypes() {
+        return vehicleTypeRepository.findAll().stream()
+                .map(VehicleType::getName)
+                .collect(Collectors.toList());
+    }
+
     private VehicleResponse mapToResponse(Vehicle vehicle) {
         return VehicleResponse.builder()
                 .id(vehicle.getId())
                 .registrationNumber(vehicle.getRegistrationNumber())
-                .vehicleType(vehicle.getVehicleType().name())
+                .vehicleType(vehicle.getVehicleType().getName())
                 .make(vehicle.getMake())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())

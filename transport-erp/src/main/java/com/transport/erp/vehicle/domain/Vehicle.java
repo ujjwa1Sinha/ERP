@@ -22,8 +22,8 @@ public class Vehicle extends BaseEntity {
     @Column(name = "registration_number", nullable = false, length = 20)
     private String registrationNumber;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "vehicle_type", nullable = false, length = 20)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicle_type_id", nullable = false)
     private VehicleType vehicleType;
 
     @Column(length = 50)
