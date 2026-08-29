@@ -1,0 +1,1177 @@
+{
+    "info": {
+        "name": "Transport ERP - Phase 1 Fleet Core",
+        "description": "Complete API collection for Transport ERP Phase 1.\n\n**Setup:**\n1. Run the 'Login' request first to get your JWT token\n2. The token is auto-saved to the `authToken` collection variable\n3. All other requests use this token automatically\n\n**Default Admin Credentials:**\n- Username: admin\n- Password: admin123",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8081",
+            "type": "string"
+        },
+        {
+            "key": "authToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "branchId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "vehicleId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "driverId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "documentId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "assignmentId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "userId",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{authToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "🔐 Auth",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.accessToken) {",
+                                    "        pm.collectionVariables.set('authToken', jsonData.data.accessToken);",
+                                    "        console.log('✅ Auth token saved!');",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Login with credentials. The JWT token is auto-saved to the `authToken` variable."
+                    }
+                },
+                {
+                    "name": "Register New User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    console.log('✅ User registered successfully');",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"fleet_manager1\",\n    \"password\": \"FleetMgr@2024\",\n    \"email\": \"fleet.manager@transport-erp.com\",\n    \"fullName\": \"Rajesh Kumar\",\n    \"phone\": \"9876543210\",\n    \"roles\": [\"FLEET_MANAGER\"]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a new user. Available roles: SUPER_ADMIN, OWNER, FLEET_MANAGER, DISPATCHER, ACCOUNTANT, HR, MAINTENANCE_MANAGER, DRIVER, VIEWER"
+                    }
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.accessToken) {",
+                                    "        pm.collectionVariables.set('authToken', jsonData.data.accessToken);",
+                                    "        console.log('✅ Token refreshed and saved!');",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"refreshToken\": \"paste-refresh-token-from-login-response-here\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/refresh",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "refresh"
+                            ]
+                        },
+                        "description": "Refresh an expired access token using a valid refresh token."
+                    }
+                },
+                {
+                    "name": "Get All Users",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "users"
+                            ]
+                        },
+                        "description": "List all registered users. Requires USER_VIEW permission."
+                    }
+                },
+                {
+                    "name": "Get User by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"fullName\": \"Rajesh Kumar (Updated)\",\n    \"email\": \"rajesh.updated@transport-erp.com\",\n    \"phone\": \"9876543299\",\n    \"roles\": [\"FLEET_MANAGER\", \"DISPATCHER\"],\n    \"branchId\": \"{{branchId}}\",\n    \"active\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Partial update — only non-null fields are changed. You can update any combination of: fullName, email, phone, password, roles, branchId, active."
+                    }
+                },
+                {
+                    "name": "Change User Password",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"password\": \"NewSecure@2024\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Change only the password for a user. All other fields remain unchanged."
+                    }
+                },
+                {
+                    "name": "Deactivate User",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Soft-deactivate a user (sets active=false)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏢 Branches",
+            "item": [
+                {
+                    "name": "Create Branch",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.id) {",
+                                    "        pm.collectionVariables.set('branchId', jsonData.data.id);",
+                                    "        console.log('✅ Branch ID saved: ' + jsonData.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Delhi Main Depot\",\n    \"code\": \"DEL-MAIN\",\n    \"address\": \"Industrial Area, Phase 2, Sector 62\",\n    \"city\": \"New Delhi\",\n    \"state\": \"Delhi\",\n    \"pinCode\": \"110062\",\n    \"phone\": \"011-29876543\",\n    \"email\": \"delhi.main@transport-erp.com\",\n    \"contactPerson\": \"Amit Sharma\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/branches",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "branches"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Branches",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/branches",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "branches"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Branch by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/branches/{{branchId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "branches",
+                                "{{branchId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Branch",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Delhi Main Depot (Updated)\",\n    \"code\": \"DEL-MAIN\",\n    \"address\": \"Industrial Area, Phase 2, Sector 62\",\n    \"city\": \"New Delhi\",\n    \"state\": \"Delhi\",\n    \"pinCode\": \"110062\",\n    \"phone\": \"011-29876543\",\n    \"email\": \"delhi.main@transport-erp.com\",\n    \"contactPerson\": \"Amit Sharma\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/branches/{{branchId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "branches",
+                                "{{branchId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Deactivate Branch",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/branches/{{branchId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "branches",
+                                "{{branchId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🚛 Vehicles",
+            "item": [
+                {
+                    "name": "Create Vehicle",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.id) {",
+                                    "        pm.collectionVariables.set('vehicleId', jsonData.data.id);",
+                                    "        console.log('✅ Vehicle ID saved: ' + jsonData.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"registrationNumber\": \"DL01AB1234\",\n    \"vehicleType\": \"TRUCK\",\n    \"make\": \"Tata\",\n    \"model\": \"Prima 4928.S\",\n    \"manufactureYear\": 2023,\n    \"fuelType\": \"DIESEL\",\n    \"capacity\": 28,\n    \"chassisNumber\": \"MAT449216NRH12345\",\n    \"engineNumber\": \"497TCPL8XT1234567\",\n    \"gpsDeviceId\": \"GPS-TRK-001\",\n    \"insuranceExpiry\": \"2025-08-15\",\n    \"fitnessExpiry\": \"2025-12-31\",\n    \"permitExpiry\": \"2026-03-31\",\n    \"pollutionExpiry\": \"2025-06-30\",\n    \"taxExpiry\": \"2026-03-31\",\n    \"branchId\": \"{{branchId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Vehicles (Paginated)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles?page=0&size=20&sortBy=registrationNumber",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "registrationNumber"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Vehicle by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles",
+                                "{{vehicleId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Vehicle by Registration",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles/registration/DL01AB1234",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles",
+                                "registration",
+                                "DL01AB1234"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Vehicles by Branch",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles/branch/{{branchId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles",
+                                "branch",
+                                "{{branchId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Vehicle",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"registrationNumber\": \"DL01AB1234\",\n    \"vehicleType\": \"TRUCK\",\n    \"make\": \"Tata\",\n    \"model\": \"Prima 4928.S\",\n    \"manufactureYear\": 2023,\n    \"fuelType\": \"DIESEL\",\n    \"capacity\": 28,\n    \"currentOdometer\": 15230.5,\n    \"chassisNumber\": \"MAT449216NRH12345\",\n    \"engineNumber\": \"497TCPL8XT1234567\",\n    \"gpsDeviceId\": \"GPS-TRK-001\",\n    \"insuranceExpiry\": \"2026-08-15\",\n    \"fitnessExpiry\": \"2026-12-31\",\n    \"permitExpiry\": \"2027-03-31\",\n    \"pollutionExpiry\": \"2026-06-30\",\n    \"taxExpiry\": \"2027-03-31\",\n    \"branchId\": \"{{branchId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles",
+                                "{{vehicleId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Decommission Vehicle",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "vehicles",
+                                "{{vehicleId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👤 Drivers",
+            "item": [
+                {
+                    "name": "Create Driver",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.id) {",
+                                    "        pm.collectionVariables.set('driverId', jsonData.data.id);",
+                                    "        console.log('✅ Driver ID saved: ' + jsonData.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"employeeCode\": \"DRV-001\",\n    \"name\": \"Suresh Yadav\",\n    \"phone\": \"9876543210\",\n    \"alternatePhone\": \"9876543211\",\n    \"dateOfBirth\": \"1990-05-15\",\n    \"joiningDate\": \"2023-01-10\",\n    \"address\": \"H.No 45, Village Khera, Gurgaon\",\n    \"city\": \"Gurgaon\",\n    \"state\": \"Haryana\",\n    \"pinCode\": \"122001\",\n    \"aadharNumber\": \"123456789012\",\n    \"panNumber\": \"ABCDE1234F\",\n    \"bloodGroup\": \"B+\",\n    \"branchId\": \"{{branchId}}\",\n    \"licenses\": [\n        {\n            \"licenseNumber\": \"HR0620210001234\",\n            \"licenseType\": \"HMV\",\n            \"issuingAuthority\": \"RTO Gurgaon\",\n            \"issueDate\": \"2021-03-15\",\n            \"expiryDate\": \"2041-03-14\",\n            \"isPrimary\": true\n        }\n    ],\n    \"emergencyContacts\": [\n        {\n            \"name\": \"Ramesh Yadav\",\n            \"relationship\": \"Father\",\n            \"phone\": \"9876000111\",\n            \"address\": \"Same as driver\",\n            \"isPrimary\": true\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Drivers (Paginated)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers?page=0&size=20&sortBy=name",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "sortBy",
+                                    "value": "name"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Driver by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/{{driverId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "{{driverId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Driver by Employee Code",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/code/DRV-001",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "code",
+                                "DRV-001"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Drivers by Branch",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/branch/{{branchId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "branch",
+                                "{{branchId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Drivers by Name",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/search?name=Suresh&page=0&size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "search"
+                            ],
+                            "query": [
+                                {
+                                    "key": "name",
+                                    "value": "Suresh"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Driver",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"employeeCode\": \"DRV-001\",\n    \"name\": \"Suresh Yadav\",\n    \"phone\": \"9876543210\",\n    \"alternatePhone\": \"9876543211\",\n    \"dateOfBirth\": \"1990-05-15\",\n    \"joiningDate\": \"2023-01-10\",\n    \"address\": \"H.No 45, Village Khera, Gurgaon (Updated)\",\n    \"city\": \"Gurgaon\",\n    \"state\": \"Haryana\",\n    \"pinCode\": \"122001\",\n    \"aadharNumber\": \"123456789012\",\n    \"panNumber\": \"ABCDE1234F\",\n    \"bloodGroup\": \"B+\",\n    \"branchId\": \"{{branchId}}\",\n    \"licenses\": [\n        {\n            \"licenseNumber\": \"HR0620210001234\",\n            \"licenseType\": \"HMV\",\n            \"issuingAuthority\": \"RTO Gurgaon\",\n            \"issueDate\": \"2021-03-15\",\n            \"expiryDate\": \"2041-03-14\",\n            \"isPrimary\": true\n        }\n    ],\n    \"emergencyContacts\": [\n        {\n            \"name\": \"Ramesh Yadav\",\n            \"relationship\": \"Father\",\n            \"phone\": \"9876000111\",\n            \"address\": \"Same as driver\",\n            \"isPrimary\": true\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/{{driverId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "{{driverId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Driver Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"ON_LEAVE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/drivers/{{driverId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "drivers",
+                                "{{driverId}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Available statuses: ACTIVE, INACTIVE, ON_LEAVE, SUSPENDED, TERMINATED"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📄 Documents",
+            "item": [
+                {
+                    "name": "Create Document (Vehicle Insurance)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.id) {",
+                                    "        pm.collectionVariables.set('documentId', jsonData.data.id);",
+                                    "        console.log('✅ Document ID saved: ' + jsonData.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"entityType\": \"VEHICLE\",\n    \"entityId\": \"{{vehicleId}}\",\n    \"documentType\": \"INSURANCE\",\n    \"documentNumber\": \"POL-2024-INS-001234\",\n    \"issueDate\": \"2024-08-01\",\n    \"expiryDate\": \"2025-07-31\",\n    \"fileUrl\": \"/documents/vehicle/insurance/POL-2024-INS-001234.pdf\",\n    \"remarks\": \"Comprehensive insurance - New India Assurance\",\n    \"alertDaysBefore\": 45\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents"
+                            ]
+                        },
+                        "description": "Entity types: VEHICLE, DRIVER, COMPANY, TRIP\n\nVehicle doc types: REGISTRATION_CERTIFICATE, INSURANCE, FITNESS_CERTIFICATE, PERMIT, PUC, ROAD_TAX, FASTAG\n\nDriver doc types: DRIVING_LICENSE, AADHAR_CARD, PAN_CARD, MEDICAL_CERTIFICATE, TRAINING_CERTIFICATE, POLICE_VERIFICATION\n\nGeneral: CONTRACT, AGREEMENT, OTHER"
+                    }
+                },
+                {
+                    "name": "Create Document (Driver Medical)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"entityType\": \"DRIVER\",\n    \"entityId\": \"{{driverId}}\",\n    \"documentType\": \"MEDICAL_CERTIFICATE\",\n    \"documentNumber\": \"MED-2024-5678\",\n    \"issueDate\": \"2024-06-01\",\n    \"expiryDate\": \"2025-05-31\",\n    \"fileUrl\": \"/documents/driver/medical/MED-2024-5678.pdf\",\n    \"remarks\": \"Annual medical checkup - Fit for duty\",\n    \"alertDaysBefore\": 30\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Documents by Entity",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents/entity/VEHICLE/{{vehicleId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents",
+                                "entity",
+                                "VEHICLE",
+                                "{{vehicleId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Document by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents/{{documentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents",
+                                "{{documentId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Expiring Documents",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents/expiring?daysAhead=90",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents",
+                                "expiring"
+                            ],
+                            "query": [
+                                {
+                                    "key": "daysAhead",
+                                    "value": "90"
+                                }
+                            ]
+                        },
+                        "description": "Get all documents expiring within the next N days (default: 30)"
+                    }
+                },
+                {
+                    "name": "Update Document",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"entityType\": \"VEHICLE\",\n    \"entityId\": \"{{vehicleId}}\",\n    \"documentType\": \"INSURANCE\",\n    \"documentNumber\": \"POL-2024-INS-001234-RENEWED\",\n    \"issueDate\": \"2025-08-01\",\n    \"expiryDate\": \"2026-07-31\",\n    \"fileUrl\": \"/documents/vehicle/insurance/POL-2024-INS-001234-RENEWED.pdf\",\n    \"remarks\": \"Renewed - Comprehensive insurance - New India Assurance\",\n    \"alertDaysBefore\": 45\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents/{{documentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents",
+                                "{{documentId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete (Cancel) Document",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/documents/{{documentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "documents",
+                                "{{documentId}}"
+                            ]
+                        },
+                        "description": "Soft-deletes the document by setting status to CANCELLED"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔗 Assignments",
+            "item": [
+                {
+                    "name": "Assign Driver to Vehicle",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    if (jsonData.data && jsonData.data.id) {",
+                                    "        pm.collectionVariables.set('assignmentId', jsonData.data.id);",
+                                    "        console.log('✅ Assignment ID saved: ' + jsonData.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"driverId\": \"{{driverId}}\",\n    \"vehicleId\": \"{{vehicleId}}\",\n    \"role\": \"PRIMARY_DRIVER\",\n    \"remarks\": \"Regular assignment for Delhi-Mumbai route\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments"
+                            ]
+                        },
+                        "description": "Available roles: PRIMARY_DRIVER, SECONDARY_DRIVER, RELIEF_DRIVER"
+                    }
+                },
+                {
+                    "name": "Release Assignment",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/{{assignmentId}}/release",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "{{assignmentId}}",
+                                "release"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Active Assignments",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/active",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "active"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Active Assignment by Vehicle",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/vehicle/{{vehicleId}}/active",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "vehicle",
+                                "{{vehicleId}}",
+                                "active"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Active Assignment by Driver",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/driver/{{driverId}}/active",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "driver",
+                                "{{driverId}}",
+                                "active"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Vehicle Assignment History",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/vehicle/{{vehicleId}}/history",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "vehicle",
+                                "{{vehicleId}}",
+                                "history"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Driver Assignment History",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/assignments/driver/{{driverId}}/history",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "assignments",
+                                "driver",
+                                "{{driverId}}",
+                                "history"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,25 @@
+package com.transport.erp.auth.domain;
+
+public enum PermissionType {
+    VEHICLE_VIEW,
+    VEHICLE_EDIT,
+    DRIVER_VIEW,
+    DRIVER_EDIT,
+    DRIVER_MEDICAL_VIEW,
+    TRIP_VIEW,
+    TRIP_CREATE,
+    TRIP_ASSIGN,
+    EXPENSE_VIEW,
+    EXPENSE_APPROVE,
+    GPS_VIEW,
+    GPS_HISTORY_VIEW,
+    BRANCH_VIEW,
+    BRANCH_EDIT,
+    USER_VIEW,
+    USER_EDIT,
+    DOCUMENT_VIEW,
+    DOCUMENT_EDIT,
+    ASSIGNMENT_VIEW,
+    ASSIGNMENT_EDIT,
+    REPORT_VIEW
+}
