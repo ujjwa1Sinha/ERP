@@ -1,10 +1,8 @@
 package com.transport.erp.auth.service;
 
-import com.transport.erp.auth.domain.Role;
 import com.transport.erp.auth.domain.RoleType;
 import com.transport.erp.auth.domain.User;
 import com.transport.erp.auth.dto.*;
-import com.transport.erp.auth.repository.RoleRepository;
 import com.transport.erp.auth.repository.UserRepository;
 import com.transport.erp.auth.security.JwtTokenProvider;
 import com.transport.erp.branch.domain.Branch;
@@ -19,8 +17,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +28,6 @@ public class AuthService {
 
         private final AuthenticationManager authenticationManager;
         private final UserRepository userRepository;
-        private final RoleRepository roleRepository;
         private final BranchRepository branchRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtTokenProvider jwtTokenProvider;
@@ -45,26 +43,7 @@ public class AuthService {
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "username",
                                                 request.getUsername()));
 
-                Set<String> roles = user.getRoles().stream()
-                                .map(role -> role.getName().name())
-                                .collect(Collectors.toSet());
-
-                Set<String> permissions = user.getRoles().stream()
-                                .flatMap(role -> role.getPermissions().stream())
-                                .map(Enum::name)
-                                .collect(Collectors.toSet());
-
-                return AuthResponse.builder()
-                                .accessToken(accessToken)
-                                .refreshToken(refreshToken)
-                                .tokenType("Bearer")
-                                .userId(user.getId())
-                                .username(user.getUsername())
-                                .fullName(user.getFullName())
-                                .email(user.getEmail())
-                                .roles(roles)
-                                .permissions(permissions)
-                                .build();
+                return buildAuthResponse(accessToken, refreshToken, user);
         }
 
         @Transactional
@@ -76,16 +55,27 @@ public class AuthService {
                         throw new DuplicateResourceException("User", "email", request.getEmail());
                 }
 
+                // Resolve role — default to VIEWER
+                RoleType role = RoleType.VIEWER;
+                if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+                        String roleName = request.getRoles().iterator().next();
+                        try {
+                                role = RoleType.valueOf(roleName.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                                throw new IllegalArgumentException("Unknown role: " + roleName);
+                        }
+                }
+
                 User user = User.builder()
                                 .username(request.getUsername())
                                 .password(passwordEncoder.encode(request.getPassword()))
                                 .email(request.getEmail())
                                 .fullName(request.getFullName())
                                 .phone(request.getPhone())
+                                .role(role)
                                 .active(true)
                                 .build();
 
-                // Set branch if provided
                 if (request.getBranchId() != null) {
                         Branch branch = branchRepository.findById(request.getBranchId())
                                         .orElseThrow(() -> new ResourceNotFoundException("Branch", "id",
@@ -93,27 +83,7 @@ public class AuthService {
                         user.setBranch(branch);
                 }
 
-                // Set roles
-                Set<Role> roles = new HashSet<>();
-                if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-                        for (String roleName : request.getRoles()) {
-                                RoleType roleType = RoleType.valueOf(roleName.toUpperCase());
-                                Role role = roleRepository.findByName(roleType)
-                                                .orElseThrow(() -> new ResourceNotFoundException("Role", "name",
-                                                                roleName));
-                                roles.add(role);
-                        }
-                } else {
-                        // Default role is VIEWER
-                        Role viewerRole = roleRepository.findByName(RoleType.VIEWER)
-                                        .orElseThrow(() -> new ResourceNotFoundException("Role", "name", "VIEWER"));
-                        roles.add(viewerRole);
-                }
-                user.setRoles(roles);
-
-                User savedUser = userRepository.save(user);
-
-                return mapToUserResponse(savedUser);
+                return mapToUserResponse(userRepository.save(user));
         }
 
         public AuthResponse refreshToken(String refreshToken) {
@@ -128,34 +98,14 @@ public class AuthService {
                 User user = userRepository.findByUsername(username)
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-                Set<String> roles = user.getRoles().stream()
-                                .map(role -> role.getName().name())
-                                .collect(Collectors.toSet());
-
-                Set<String> permissions = user.getRoles().stream()
-                                .flatMap(role -> role.getPermissions().stream())
-                                .map(Enum::name)
-                                .collect(Collectors.toSet());
-
-                return AuthResponse.builder()
-                                .accessToken(newAccessToken)
-                                .refreshToken(newRefreshToken)
-                                .tokenType("Bearer")
-                                .userId(user.getId())
-                                .username(user.getUsername())
-                                .fullName(user.getFullName())
-                                .email(user.getEmail())
-                                .roles(roles)
-                                .permissions(permissions)
-                                .build();
+                return buildAuthResponse(newAccessToken, newRefreshToken, user);
         }
 
         @Transactional
-        public UserResponse updateUser(java.util.UUID userId, UpdateUserRequest request) {
+        public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-                // Update email if provided and not duplicate
                 if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
                         if (userRepository.existsByEmail(request.getEmail())) {
                                 throw new DuplicateResourceException("User", "email", request.getEmail());
@@ -163,23 +113,16 @@ public class AuthService {
                         user.setEmail(request.getEmail());
                 }
 
-                // Update password if provided
                 if (request.getPassword() != null && !request.getPassword().isBlank()) {
                         user.setPassword(passwordEncoder.encode(request.getPassword()));
                 }
-
-                // Update basic fields if provided
-                if (request.getFullName() != null) {
+                if (request.getFullName() != null)
                         user.setFullName(request.getFullName());
-                }
-                if (request.getPhone() != null) {
+                if (request.getPhone() != null)
                         user.setPhone(request.getPhone());
-                }
-                if (request.getActive() != null) {
+                if (request.getActive() != null)
                         user.setActive(request.getActive());
-                }
 
-                // Update branch if provided
                 if (request.getBranchId() != null) {
                         Branch branch = branchRepository.findById(request.getBranchId())
                                         .orElseThrow(() -> new ResourceNotFoundException("Branch", "id",
@@ -187,42 +130,55 @@ public class AuthService {
                         user.setBranch(branch);
                 }
 
-                // Update roles if provided
+                // Update role if provided (takes first entry)
                 if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-                        Set<Role> roles = new HashSet<>();
-                        for (String roleName : request.getRoles()) {
-                                RoleType roleType = RoleType.valueOf(roleName.toUpperCase());
-                                Role role = roleRepository.findByName(roleType)
-                                                .orElseThrow(() -> new ResourceNotFoundException("Role", "name",
-                                                                roleName));
-                                roles.add(role);
+                        String roleName = request.getRoles().iterator().next();
+                        try {
+                                user.setRole(RoleType.valueOf(roleName.toUpperCase()));
+                        } catch (IllegalArgumentException e) {
+                                throw new IllegalArgumentException("Unknown role: " + roleName);
                         }
-                        user.setRoles(roles);
                 }
 
                 return mapToUserResponse(userRepository.save(user));
         }
 
         @Transactional(readOnly = true)
-        public UserResponse getUserById(java.util.UUID userId) {
+        public UserResponse getUserById(UUID userId) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
                 return mapToUserResponse(user);
         }
 
         @Transactional(readOnly = true)
-        public java.util.List<UserResponse> getAllUsers() {
+        public List<UserResponse> getAllUsers() {
                 return userRepository.findAll().stream()
                                 .map(this::mapToUserResponse)
                                 .collect(Collectors.toList());
         }
 
         @Transactional
-        public void deactivateUser(java.util.UUID userId) {
+        public void deactivateUser(UUID userId) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
                 user.setActive(false);
                 userRepository.save(user);
+        }
+
+        // ── Private helpers ───────────────────────────────────────────────────────
+
+        private AuthResponse buildAuthResponse(String accessToken, String refreshToken, User user) {
+                return AuthResponse.builder()
+                                .accessToken(accessToken)
+                                .refreshToken(refreshToken)
+                                .tokenType("Bearer")
+                                .userId(user.getId())
+                                .username(user.getUsername())
+                                .fullName(user.getFullName())
+                                .email(user.getEmail())
+                                .roles(Set.of(user.getRole().name()))
+                                .permissions(user.getRole().permissions())
+                                .build();
         }
 
         private UserResponse mapToUserResponse(User user) {
@@ -235,9 +191,7 @@ public class AuthService {
                                 .active(user.isActive())
                                 .branchId(user.getBranch() != null ? user.getBranch().getId() : null)
                                 .branchName(user.getBranch() != null ? user.getBranch().getName() : null)
-                                .roles(user.getRoles().stream()
-                                                .map(role -> role.getName().name())
-                                                .collect(Collectors.toSet()))
+                                .roles(Set.of(user.getRole().name()))
                                 .build();
         }
 }
