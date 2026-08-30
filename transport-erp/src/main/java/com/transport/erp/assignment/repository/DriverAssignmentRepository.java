@@ -36,8 +36,14 @@ public interface DriverAssignmentRepository extends JpaRepository<DriverAssignme
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NULL")
         List<DriverAssignment> findAllActiveAssignments();
 
+        @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NULL AND da.vehicle.branch.id = :branchId")
+        List<DriverAssignment> findAllActiveAssignmentsByBranch(@Param("branchId") UUID branchId);
+
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NOT NULL ORDER BY da.releasedAt DESC")
         List<DriverAssignment> findAllReleasedAssignments();
+
+        @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NOT NULL AND da.vehicle.branch.id = :branchId ORDER BY da.releasedAt DESC")
+        List<DriverAssignment> findAllReleasedAssignmentsByBranch(@Param("branchId") UUID branchId);
 
         List<DriverAssignment> findByTripId(UUID tripId);
 }

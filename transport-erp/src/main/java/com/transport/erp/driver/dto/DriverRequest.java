@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -36,30 +35,17 @@ public class DriverRequest {
     private String licenseFileUrl;
     private UUID branchId;
 
-    private List<DriverLicenseRequest> licenses;
-    private List<EmergencyContactRequest> emergencyContacts;
+    // ── License fields ───────────────────────
+    private String licenseNumber;
+    private String licenseType;
+    private String licenseIssuingAuthority;
+    private LocalDate licenseIssueDate;
+    private LocalDate licenseExpiryDate;
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class DriverLicenseRequest {
-        private String licenseNumber;
-        private String licenseType;
-        private String issuingAuthority;
-        private LocalDate issueDate;
-        private LocalDate expiryDate;
-        private boolean primary;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class EmergencyContactRequest {
-        private String name;
-        private String relationship;
-        private String phone;
-        private String alternatePhone;
-        private String address;
-        private boolean primary;
-    }
+    // ── Emergency contact fields ─────────────
+    private String ecName;
+    private String ecRelationship;
+    private String ecPhone;
+    private String ecAlternatePhone;
+    private String ecAddress;
 }

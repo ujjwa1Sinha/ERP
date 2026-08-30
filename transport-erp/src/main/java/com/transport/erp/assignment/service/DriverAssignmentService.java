@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.transport.erp.auth.security.SecurityService;
+
 @Service
 @RequiredArgsConstructor
 public class DriverAssignmentService {
@@ -26,6 +28,7 @@ public class DriverAssignmentService {
         private final DriverAssignmentRepository assignmentRepository;
         private final DriverRepository driverRepository;
         private final VehicleRepository vehicleRepository;
+        private final SecurityService securityService;
 
         @Transactional
         public AssignmentResponse assignDriverToVehicle(AssignmentRequest request) {
@@ -86,6 +89,14 @@ public class DriverAssignmentService {
 
         @Transactional(readOnly = true)
         public List<AssignmentResponse> getActiveAssignments() {
+                com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+                if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                                && currentUser.getBranch() != null) {
+                        return assignmentRepository.findAllActiveAssignmentsByBranch(currentUser.getBranch().getId())
+                                        .stream()
+                                        .map(this::mapToResponse)
+                                        .collect(Collectors.toList());
+                }
                 return assignmentRepository.findAllActiveAssignments().stream()
                                 .map(this::mapToResponse)
                                 .collect(Collectors.toList());
@@ -93,6 +104,14 @@ public class DriverAssignmentService {
 
         @Transactional(readOnly = true)
         public List<AssignmentResponse> getReleasedAssignments() {
+                com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+                if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                                && currentUser.getBranch() != null) {
+                        return assignmentRepository.findAllReleasedAssignmentsByBranch(currentUser.getBranch().getId())
+                                        .stream()
+                                        .map(this::mapToResponse)
+                                        .collect(Collectors.toList());
+                }
                 return assignmentRepository.findAllReleasedAssignments().stream()
                                 .map(this::mapToResponse)
                                 .collect(Collectors.toList());

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiX, HiUserAdd } from 'react-icons/hi';
 
 const availableRoles = [
-    'SUPER_ADMIN', 'OWNER', 'FLEET_MANAGER', 'DISPATCHER',
+    'SUPER_ADMIN', 'OWNER', 'BRANCH_ADMIN', 'FLEET_MANAGER', 'DISPATCHER',
     'ACCOUNTANT', 'HR', 'MAINTENANCE_MANAGER', 'DRIVER', 'VIEWER'
 ];
 

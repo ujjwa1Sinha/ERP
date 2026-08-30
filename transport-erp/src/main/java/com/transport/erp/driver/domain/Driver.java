@@ -6,8 +6,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "drivers")
@@ -69,11 +67,35 @@ public class Driver extends BaseEntity {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<DriverLicense> licenses = new ArrayList<>();
+    // ── Licence (flattened — one per driver) ─────────────────────
+    @Column(name = "license_number", length = 30)
+    private String licenseNumber;
 
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<DriverEmergencyContact> emergencyContacts = new ArrayList<>();
+    @Column(name = "license_type", length = 20)
+    private String licenseType;
+
+    @Column(name = "license_issuing_authority", length = 100)
+    private String licenseIssuingAuthority;
+
+    @Column(name = "license_issue_date")
+    private LocalDate licenseIssueDate;
+
+    @Column(name = "license_expiry_date")
+    private LocalDate licenseExpiryDate;
+
+    // ── Emergency contact (flattened — one per driver) ────────────
+    @Column(name = "ec_name", length = 100)
+    private String ecName;
+
+    @Column(name = "ec_relationship", length = 50)
+    private String ecRelationship;
+
+    @Column(name = "ec_phone", length = 15)
+    private String ecPhone;
+
+    @Column(name = "ec_alternate_phone", length = 15)
+    private String ecAlternatePhone;
+
+    @Column(name = "ec_address", length = 500)
+    private String ecAddress;
 }

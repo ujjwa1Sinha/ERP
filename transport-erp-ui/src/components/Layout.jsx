@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import useInactivityLogout from '../hooks/useInactivityLogout';
 import {
     HiOutlineViewGrid, HiOutlineOfficeBuilding, HiOutlineTruck,
-    HiOutlineUserGroup, HiOutlineDocumentText, HiOutlineLink,
+    HiOutlineUserGroup, HiOutlineLink,
     HiOutlineUsers, HiOutlineLogout, HiMenu, HiX
 } from 'react-icons/hi';
 
@@ -18,7 +18,6 @@ const navItems = [
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
     { path: '/assignments', label: 'Assignments', icon: HiOutlineLink, requiredPermission: 'ASSIGNMENT_VIEW' },
-    { path: '/documents', label: 'Documents', icon: HiOutlineDocumentText, requiredPermission: 'DOCUMENT_VIEW' },
     { section: 'Administration' },
     { path: '/users', label: 'Users', icon: HiOutlineUsers, requiredPermission: 'USER_VIEW' },
 ];
@@ -28,7 +27,6 @@ const pageTitles = {
     '/branches': 'Branches',
     '/vehicles': 'Vehicles',
     '/drivers': 'Drivers',
-    '/documents': 'Documents',
     '/assignments': 'Assignments',
     '/users': 'User Management',
 };

@@ -31,6 +31,7 @@ public class AuthService {
         private final BranchRepository branchRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtTokenProvider jwtTokenProvider;
+        private final com.transport.erp.auth.security.SecurityService securityService;
 
         public AuthResponse login(LoginRequest request) {
                 Authentication authentication = authenticationManager.authenticate(
@@ -152,7 +153,15 @@ public class AuthService {
 
         @Transactional(readOnly = true)
         public List<UserResponse> getAllUsers() {
-                return userRepository.findAll().stream()
+                com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+                java.util.stream.Stream<User> userStream;
+                if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                                && currentUser.getBranch() != null) {
+                        userStream = userRepository.findByBranchId(currentUser.getBranch().getId()).stream();
+                } else {
+                        userStream = userRepository.findAll().stream();
+                }
+                return userStream
                                 .map(this::mapToUserResponse)
                                 .collect(Collectors.toList());
         }

@@ -24,6 +24,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
 
     List<Vehicle> findByBranchId(UUID branchId);
 
+    Page<Vehicle> findByBranchId(UUID branchId, Pageable pageable);
+
     Page<Vehicle> findByStatus(VehicleStatus status, Pageable pageable);
 
     Page<Vehicle> findByVehicleType(VehicleType vehicleType, Pageable pageable);

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const TIMEOUT_MS = 3 * 60 * 1000;  // total idle time before logout
+const TIMEOUT_MS = 15 * 60 * 1000;  // total idle time before logout
 const WARNING_MS = 1 * 60 * 1000;  // warn this many ms before logout
 const CHECK_EVERY_MS = 5 * 1000;       // how often to check (every 5s)
 const STORAGE_KEY = 'erp_last_activity';
