@@ -62,6 +62,9 @@ public class Vehicle extends BaseEntity {
     @Column(name = "insurance_expiry")
     private LocalDate insuranceExpiry;
 
+    @Column(name = "insurance_file_url")
+    private String insuranceFileUrl;
+
     @Column(name = "fitness_expiry")
     private LocalDate fitnessExpiry;
 

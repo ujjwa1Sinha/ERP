@@ -63,6 +63,7 @@ public class VehicleService {
                                 .engineNumber(request.getEngineNumber())
                                 .gpsDeviceId(request.getGpsDeviceId())
                                 .insuranceExpiry(request.getInsuranceExpiry())
+                                .insuranceFileUrl(request.getInsuranceFileUrl())
                                 .fitnessExpiry(request.getFitnessExpiry())
                                 .permitExpiry(request.getPermitExpiry())
                                 .pollutionExpiry(request.getPollutionExpiry())
@@ -153,6 +154,7 @@ public class VehicleService {
                 vehicle.setEngineNumber(request.getEngineNumber());
                 vehicle.setGpsDeviceId(request.getGpsDeviceId());
                 vehicle.setInsuranceExpiry(request.getInsuranceExpiry());
+                vehicle.setInsuranceFileUrl(request.getInsuranceFileUrl());
                 vehicle.setFitnessExpiry(request.getFitnessExpiry());
                 vehicle.setPermitExpiry(request.getPermitExpiry());
                 vehicle.setPollutionExpiry(request.getPollutionExpiry());
@@ -199,6 +201,7 @@ public class VehicleService {
                                 .engineNumber(vehicle.getEngineNumber())
                                 .gpsDeviceId(vehicle.getGpsDeviceId())
                                 .insuranceExpiry(vehicle.getInsuranceExpiry())
+                                .insuranceFileUrl(vehicle.getInsuranceFileUrl())
                                 .fitnessExpiry(vehicle.getFitnessExpiry())
                                 .permitExpiry(vehicle.getPermitExpiry())
                                 .pollutionExpiry(vehicle.getPollutionExpiry())

@@ -32,6 +32,7 @@ public class VehicleRequest {
     private String engineNumber;
     private String gpsDeviceId;
     private LocalDate insuranceExpiry;
+    private String insuranceFileUrl;
     private LocalDate fitnessExpiry;
     private LocalDate permitExpiry;
     private LocalDate pollutionExpiry;
