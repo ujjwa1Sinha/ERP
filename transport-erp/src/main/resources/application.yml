@@ -3,9 +3,9 @@ spring:
     name: transport-erp
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/transport_erp
+    url: jdbc:postgresql://db.yrlulcoedvhthzwsxhes.supabase.co:5432/postgres?prepareThreshold=0
     username: postgres
-    password: ujjwal1060
+    password: Transporterp@63917
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -49,10 +49,11 @@ server:
 app:
   upload:
     dir: ./uploads/documents
+
   jwt:
-    secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci10cmFuc3BvcnQtZXJwLXN5c3RlbS0yMDI0
-    expiration-ms: 86400000   # 24 hours
-    refresh-expiration-ms: 604800000  # 7 days
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
 
 logging:
   level:
