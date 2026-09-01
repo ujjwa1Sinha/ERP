@@ -767,7 +767,7 @@ tr:last-child td {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/new-bg.png') center center / cover no-repeat;
+  background: url('./assets/new-bg.png') center center / cover no-repeat;
   opacity: 0.20;
   z-index: 0;
 }
