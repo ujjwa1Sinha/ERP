@@ -13,13 +13,13 @@ import java.net.URI;
 @Configuration
 public class S3Config {
 
-    @Value("${supabase.s3.endpoint}")
+    @Value("${supabase.s3.endpoint:https://yrlulcoedvhthzwsxhes.supabase.co/storage/v1/s3}")
     private String s3Endpoint;
 
-    @Value("${supabase.s3.access-key}")
+    @Value("${supabase.s3.access-key:dummy}")
     private String accessKey;
 
-    @Value("${supabase.s3.secret-key}")
+    @Value("${supabase.s3.secret-key:dummy}")
     private String secretKey;
 
     @Value("${supabase.s3.region:ap-northeast-1}")

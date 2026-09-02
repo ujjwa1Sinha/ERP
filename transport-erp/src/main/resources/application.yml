@@ -66,5 +66,5 @@ supabase:
     endpoint: ${SUPABASE_S3_ENDPOINT:https://yrlulcoedvhthzwsxhes.supabase.co/storage/v1/s3}
     region: ${SUPABASE_S3_REGION:ap-northeast-1}
     bucket: ${SUPABASE_S3_BUCKET:documents} # Change 'documents' to whatever you named your bucket
-    access-key: ${SUPABASE_S3_ACCESS_KEY}
-    secret-key: ${SUPABASE_S3_SECRET_KEY}
+    access-key: ${SUPABASE_S3_ACCESS_KEY:dummy-access-key}
+    secret-key: ${SUPABASE_S3_SECRET_KEY:dummy-secret-key}

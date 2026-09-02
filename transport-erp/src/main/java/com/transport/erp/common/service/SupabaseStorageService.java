@@ -17,10 +17,10 @@ public class SupabaseStorageService {
 
     private final S3Client s3Client;
 
-    @Value("${supabase.s3.bucket}")
+    @Value("${supabase.s3.bucket:documents}")
     private String bucketName;
 
-    @Value("${supabase.url}")
+    @Value("${supabase.url:https://dummy.supabase.co}")
     private String supabaseUrl;
 
     /**
