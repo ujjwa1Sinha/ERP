@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -34,32 +33,17 @@ public class DriverResponse {
     private String branchName;
     private Instant createdAt;
 
-    private List<LicenseInfo> licenses;
-    private List<EmergencyContactInfo> emergencyContacts;
+    // ── License fields ───────────────────────
+    private String licenseNumber;
+    private String licenseType;
+    private String licenseIssuingAuthority;
+    private LocalDate licenseIssueDate;
+    private LocalDate licenseExpiryDate;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class LicenseInfo {
-        private UUID id;
-        private String licenseNumber;
-        private String licenseType;
-        private String issuingAuthority;
-        private LocalDate issueDate;
-        private LocalDate expiryDate;
-        private boolean primary;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class EmergencyContactInfo {
-        private UUID id;
-        private String name;
-        private String relationship;
-        private String phone;
-        private boolean primary;
-    }
+    // ── Emergency contact fields ─────────────
+    private String ecName;
+    private String ecRelationship;
+    private String ecPhone;
+    private String ecAlternatePhone;
+    private String ecAddress;
 }

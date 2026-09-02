@@ -1,0 +1,8 @@
+target/
+.git/
+*.md
+*.jpg
+*.json
+docker-compose.yml
+.gitignore
+.vscode/

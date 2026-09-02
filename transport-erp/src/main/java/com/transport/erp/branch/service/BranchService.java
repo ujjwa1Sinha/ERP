@@ -14,11 +14,14 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.transport.erp.auth.security.SecurityService;
+
 @Service
 @RequiredArgsConstructor
 public class BranchService {
 
     private final BranchRepository branchRepository;
+    private final SecurityService securityService;
 
     @Transactional
     public BranchResponse createBranch(BranchRequest request) {
@@ -44,6 +47,12 @@ public class BranchService {
 
     @Transactional(readOnly = true)
     public List<BranchResponse> getAllBranches() {
+        com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                && currentUser.getBranch() != null) {
+            return java.util.List.of(mapToResponse(currentUser.getBranch()));
+        }
+
         return branchRepository.findByActiveTrue().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

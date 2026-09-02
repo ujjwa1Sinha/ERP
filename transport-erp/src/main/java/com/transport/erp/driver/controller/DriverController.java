@@ -7,7 +7,7 @@ import com.transport.erp.driver.dto.DriverRequest;
 import com.transport.erp.driver.dto.DriverResponse;
 import com.transport.erp.driver.service.DriverService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,13 +28,11 @@ public class DriverController {
 
     private final DriverService driverService;
     private final ObjectMapper objectMapper;
+    private final com.transport.erp.common.service.SupabaseStorageService storageService;
 
     private static final long MAX_LICENSE_SIZE = 1_048_576; // 1MB
     private static final List<String> ALLOWED_TYPES = List.of(
-            "application/pdf", "image/jpeg", "image/jpg");
-
-    @Value("${app.upload.dir:./uploads/documents}")
-    private String uploadDir;
+            "application/pdf", "image/jpeg", "image/jpg", "image/png");
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('DRIVER_EDIT')")
@@ -137,22 +132,11 @@ public class DriverController {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
             throw new IllegalArgumentException(
-                    "Invalid file type. Only PDF and JPEG files are allowed.");
+                    "Invalid file type. Only PDF and JPEG/PNG files are allowed.");
         }
 
-        try {
-            Files.createDirectories(Paths.get(uploadDir));
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-            String storedFilename = UUID.randomUUID() + extension;
-            Path targetPath = Paths.get(uploadDir).resolve(storedFilename);
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-            return "/api/documents/files/" + storedFilename;
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to store license file", e);
-        }
+        // Upload to Supabase 'documents' bucket under the 'drivers' folder (or directly
+        // in bucket depending on config)
+        return storageService.uploadFile(file, "drivers");
     }
 }

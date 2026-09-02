@@ -1,11 +1,15 @@
 package com.transport.erp.driver.service;
 
+import com.transport.erp.auth.domain.RoleType;
+import com.transport.erp.auth.domain.User;
+import com.transport.erp.auth.security.SecurityService;
 import com.transport.erp.branch.domain.Branch;
 import com.transport.erp.branch.repository.BranchRepository;
 import com.transport.erp.common.dto.PagedResponse;
 import com.transport.erp.common.exception.DuplicateResourceException;
 import com.transport.erp.common.exception.ResourceNotFoundException;
-import com.transport.erp.driver.domain.*;
+import com.transport.erp.driver.domain.Driver;
+import com.transport.erp.driver.domain.DriverStatus;
 import com.transport.erp.driver.dto.DriverRequest;
 import com.transport.erp.driver.dto.DriverResponse;
 import com.transport.erp.driver.repository.DriverRepository;
@@ -27,6 +31,7 @@ public class DriverService {
 
     private final DriverRepository driverRepository;
     private final BranchRepository branchRepository;
+    private final SecurityService securityService;
 
     @Transactional
     public DriverResponse createDriver(DriverRequest request) {
@@ -55,6 +60,18 @@ public class DriverService {
                 .panNumber(request.getPanNumber())
                 .bloodGroup(request.getBloodGroup())
                 .licenseFileUrl(request.getLicenseFileUrl())
+                // License
+                .licenseNumber(request.getLicenseNumber())
+                .licenseType(request.getLicenseType())
+                .licenseIssuingAuthority(request.getLicenseIssuingAuthority())
+                .licenseIssueDate(request.getLicenseIssueDate())
+                .licenseExpiryDate(request.getLicenseExpiryDate())
+                // Emergency contact
+                .ecName(request.getEcName())
+                .ecRelationship(request.getEcRelationship())
+                .ecPhone(request.getEcPhone())
+                .ecAlternatePhone(request.getEcAlternatePhone())
+                .ecAddress(request.getEcAddress())
                 .build();
 
         if (request.getBranchId() != null) {
@@ -63,45 +80,19 @@ public class DriverService {
             driver.setBranch(branch);
         }
 
-        // Add licenses
-        if (request.getLicenses() != null) {
-            for (DriverRequest.DriverLicenseRequest licReq : request.getLicenses()) {
-                DriverLicense license = DriverLicense.builder()
-                        .driver(driver)
-                        .licenseNumber(licReq.getLicenseNumber())
-                        .licenseType(licReq.getLicenseType())
-                        .issuingAuthority(licReq.getIssuingAuthority())
-                        .issueDate(licReq.getIssueDate())
-                        .expiryDate(licReq.getExpiryDate())
-                        .primary(licReq.isPrimary())
-                        .build();
-                driver.getLicenses().add(license);
-            }
-        }
-
-        // Add emergency contacts
-        if (request.getEmergencyContacts() != null) {
-            for (DriverRequest.EmergencyContactRequest ecReq : request.getEmergencyContacts()) {
-                DriverEmergencyContact contact = DriverEmergencyContact.builder()
-                        .driver(driver)
-                        .name(ecReq.getName())
-                        .relationship(ecReq.getRelationship())
-                        .phone(ecReq.getPhone())
-                        .alternatePhone(ecReq.getAlternatePhone())
-                        .address(ecReq.getAddress())
-                        .primary(ecReq.isPrimary())
-                        .build();
-                driver.getEmergencyContacts().add(contact);
-            }
-        }
-
         return mapToResponse(driverRepository.save(driver));
     }
 
     @Transactional(readOnly = true)
     public PagedResponse<DriverResponse> getAllDrivers(int page, int size, String sortBy) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
-        Page<Driver> driverPage = driverRepository.findAll(pageable);
+        User currentUser = securityService.getCurrentUser();
+        Page<Driver> driverPage;
+        if (currentUser != null && currentUser.getRole() == RoleType.BRANCH_ADMIN && currentUser.getBranch() != null) {
+            driverPage = driverRepository.findByBranchId(currentUser.getBranch().getId(), pageable);
+        } else {
+            driverPage = driverRepository.findAll(pageable);
+        }
         return buildPagedResponse(driverPage);
     }
 
@@ -109,6 +100,7 @@ public class DriverService {
     public DriverResponse getDriverById(UUID id) {
         Driver driver = driverRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", "id", id));
+        checkBranchAccess(driver);
         return mapToResponse(driver);
     }
 
@@ -116,6 +108,7 @@ public class DriverService {
     public DriverResponse getDriverByEmployeeCode(String employeeCode) {
         Driver driver = driverRepository.findByEmployeeCode(employeeCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", "employeeCode", employeeCode));
+        checkBranchAccess(driver);
         return mapToResponse(driver);
     }
 
@@ -129,8 +122,24 @@ public class DriverService {
     @Transactional(readOnly = true)
     public PagedResponse<DriverResponse> searchDrivers(String name, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Driver> driverPage = driverRepository.searchByName(name, pageable);
+        User currentUser = securityService.getCurrentUser();
+        Page<Driver> driverPage;
+        if (currentUser != null && currentUser.getRole() == RoleType.BRANCH_ADMIN && currentUser.getBranch() != null) {
+            driverPage = driverRepository.searchByNameAndBranchId(name, currentUser.getBranch().getId(), pageable);
+        } else {
+            driverPage = driverRepository.searchByName(name, pageable);
+        }
         return buildPagedResponse(driverPage);
+    }
+
+    private void checkBranchAccess(Driver driver) {
+        User currentUser = securityService.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == RoleType.BRANCH_ADMIN) {
+            if (currentUser.getBranch() == null || driver.getBranch() == null ||
+                    !currentUser.getBranch().getId().equals(driver.getBranch().getId())) {
+                throw new ResourceNotFoundException("Driver", "id", driver.getId());
+            }
+        }
     }
 
     @Transactional
@@ -157,45 +166,23 @@ public class DriverService {
         if (request.getLicenseFileUrl() != null) {
             driver.setLicenseFileUrl(request.getLicenseFileUrl());
         }
+        // License
+        driver.setLicenseNumber(request.getLicenseNumber());
+        driver.setLicenseType(request.getLicenseType());
+        driver.setLicenseIssuingAuthority(request.getLicenseIssuingAuthority());
+        driver.setLicenseIssueDate(request.getLicenseIssueDate());
+        driver.setLicenseExpiryDate(request.getLicenseExpiryDate());
+        // Emergency contact
+        driver.setEcName(request.getEcName());
+        driver.setEcRelationship(request.getEcRelationship());
+        driver.setEcPhone(request.getEcPhone());
+        driver.setEcAlternatePhone(request.getEcAlternatePhone());
+        driver.setEcAddress(request.getEcAddress());
 
         if (request.getBranchId() != null) {
             Branch branch = branchRepository.findById(request.getBranchId())
                     .orElseThrow(() -> new ResourceNotFoundException("Branch", "id", request.getBranchId()));
             driver.setBranch(branch);
-        }
-
-        // Update licenses
-        if (request.getLicenses() != null) {
-            driver.getLicenses().clear();
-            for (DriverRequest.DriverLicenseRequest licReq : request.getLicenses()) {
-                DriverLicense license = DriverLicense.builder()
-                        .driver(driver)
-                        .licenseNumber(licReq.getLicenseNumber())
-                        .licenseType(licReq.getLicenseType())
-                        .issuingAuthority(licReq.getIssuingAuthority())
-                        .issueDate(licReq.getIssueDate())
-                        .expiryDate(licReq.getExpiryDate())
-                        .primary(licReq.isPrimary())
-                        .build();
-                driver.getLicenses().add(license);
-            }
-        }
-
-        // Update emergency contacts
-        if (request.getEmergencyContacts() != null) {
-            driver.getEmergencyContacts().clear();
-            for (DriverRequest.EmergencyContactRequest ecReq : request.getEmergencyContacts()) {
-                DriverEmergencyContact contact = DriverEmergencyContact.builder()
-                        .driver(driver)
-                        .name(ecReq.getName())
-                        .relationship(ecReq.getRelationship())
-                        .phone(ecReq.getPhone())
-                        .alternatePhone(ecReq.getAlternatePhone())
-                        .address(ecReq.getAddress())
-                        .primary(ecReq.isPrimary())
-                        .build();
-                driver.getEmergencyContacts().add(contact);
-            }
         }
 
         return mapToResponse(driverRepository.save(driver));
@@ -217,28 +204,6 @@ public class DriverService {
     }
 
     private DriverResponse mapToResponse(Driver driver) {
-        List<DriverResponse.LicenseInfo> licenseInfos = driver.getLicenses().stream()
-                .map(lic -> DriverResponse.LicenseInfo.builder()
-                        .id(lic.getId())
-                        .licenseNumber(lic.getLicenseNumber())
-                        .licenseType(lic.getLicenseType())
-                        .issuingAuthority(lic.getIssuingAuthority())
-                        .issueDate(lic.getIssueDate())
-                        .expiryDate(lic.getExpiryDate())
-                        .primary(lic.isPrimary())
-                        .build())
-                .collect(Collectors.toList());
-
-        List<DriverResponse.EmergencyContactInfo> contactInfos = driver.getEmergencyContacts().stream()
-                .map(ec -> DriverResponse.EmergencyContactInfo.builder()
-                        .id(ec.getId())
-                        .name(ec.getName())
-                        .relationship(ec.getRelationship())
-                        .phone(ec.getPhone())
-                        .primary(ec.isPrimary())
-                        .build())
-                .collect(Collectors.toList());
-
         return DriverResponse.builder()
                 .id(driver.getId())
                 .employeeCode(driver.getEmployeeCode())
@@ -257,8 +222,16 @@ public class DriverService {
                 .branchId(driver.getBranch() != null ? driver.getBranch().getId() : null)
                 .branchName(driver.getBranch() != null ? driver.getBranch().getName() : null)
                 .createdAt(driver.getCreatedAt())
-                .licenses(licenseInfos)
-                .emergencyContacts(contactInfos)
+                .licenseNumber(driver.getLicenseNumber())
+                .licenseType(driver.getLicenseType())
+                .licenseIssuingAuthority(driver.getLicenseIssuingAuthority())
+                .licenseIssueDate(driver.getLicenseIssueDate())
+                .licenseExpiryDate(driver.getLicenseExpiryDate())
+                .ecName(driver.getEcName())
+                .ecRelationship(driver.getEcRelationship())
+                .ecPhone(driver.getEcPhone())
+                .ecAlternatePhone(driver.getEcAlternatePhone())
+                .ecAddress(driver.getEcAddress())
                 .build();
     }
 

@@ -3,9 +3,9 @@ spring:
     name: transport-erp
 
   datasource:
-    url: jdbc:postgresql://db.yrlulcoedvhthzwsxhes.supabase.co:5432/postgres?prepareThreshold=0
-    username: postgres
-    password: Transporterp@63917
+    url: ${JDBC_URL:jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:transport_erp}}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -25,7 +25,6 @@ spring:
     out-of-order: false
     locations: classpath:db/migration
 
-  # Redis disabled for local development (no Redis installed)
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
@@ -45,26 +44,15 @@ spring:
 server:
   port: 8081
 
-# App Configuration
 app:
   upload:
-    dir: ./uploads/documents
-
+    dir: /app/uploads/documents
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci10cmFuc3BvcnQtZXJwLXN5c3RlbS0yMDI0}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
 
 logging:
   level:
     com.transport.erp: INFO
-    org.springframework.security: INFO
-
-supabase:
-  url: ${SUPABASE_URL:https://yrlulcoedvhthzwsxhes.supabase.co}
-  s3:
-    endpoint: ${SUPABASE_S3_ENDPOINT:https://yrlulcoedvhthzwsxhes.supabase.co/storage/v1/s3}
-    region: ${SUPABASE_S3_REGION:ap-northeast-1}
-    bucket: ${SUPABASE_S3_BUCKET:documents} # Change 'documents' to whatever you named your bucket
-    access-key: ${SUPABASE_S3_ACCESS_KEY:dummy-access-key}
-    secret-key: ${SUPABASE_S3_SECRET_KEY:dummy-secret-key}
+    org.springframework.security: WARN

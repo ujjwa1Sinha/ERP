@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { HiPlus, HiPencil, HiTrash, HiX } from 'react-icons/hi';
+import { HiPlus, HiPencil, HiTrash, HiX, HiUpload, HiDocumentText, HiEye, HiExclamation } from 'react-icons/hi';
 
-const types = ['TRUCK', 'TRAILER', 'BUS', 'MINI_BUS', 'TANKER', 'CONTAINER', 'TIPPER', 'OTHER'];
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+
 const fuels = ['DIESEL', 'PETROL', 'CNG', 'ELECTRIC', 'HYBRID'];
 
 const emptyVehicle = {
@@ -18,14 +20,21 @@ export default function Vehicles() {
     const canEdit = hasPermission('VEHICLE_EDIT');
     const [vehicles, setVehicles] = useState([]);
     const [branches, setBranches] = useState([]);
+    const [vehicleTypes, setVehicleTypes] = useState(["TRUCK"]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState({ ...emptyVehicle });
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => { loadVehicles(); loadBranches(); }, [page]);
+    // Insurance file state
+    const [insuranceFile, setInsuranceFile] = useState(null);
+    const [fileError, setFileError] = useState('');
+    const fileInputRef = useRef(null);
+
+    useEffect(() => { loadVehicles(); loadBranches(); loadVehicleTypes(); }, [page]);
 
     const loadVehicles = async () => {
         try {
@@ -43,7 +52,20 @@ export default function Vehicles() {
         } catch { /* silent */ }
     };
 
-    const openCreate = () => { setForm({ ...emptyVehicle }); setEditId(null); setShowModal(true); };
+    const loadVehicleTypes = async () => {
+        try {
+            const res = await api.get('/vehicles/types');
+            setVehicleTypes(res.data.data || []);
+        } catch { /* silent */ }
+    };
+
+    const openCreate = () => {
+        setForm({ ...emptyVehicle });
+        setEditId(null);
+        setInsuranceFile(null);
+        setFileError('');
+        setShowModal(true);
+    };
     const openEdit = (v) => {
         setForm({
             registrationNumber: v.registrationNumber || '', vehicleType: v.vehicleType || 'TRUCK',
@@ -55,23 +77,69 @@ export default function Vehicles() {
             taxExpiry: v.taxExpiry || '', branchId: v.branchId || ''
         });
         setEditId(v.id);
+        setInsuranceFile(null);
+        setFileError('');
         setShowModal(true);
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        setFileError('');
+        if (!selectedFile) { setInsuranceFile(null); return; }
+        if (selectedFile.size > MAX_FILE_SIZE) {
+            setFileError(`File size (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB) exceeds the 1MB limit`);
+            setInsuranceFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
+            setFileError('Only PDF and image files are allowed');
+            setInsuranceFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        setInsuranceFile(selectedFile);
+    };
+
+    const removeFile = () => {
+        setInsuranceFile(null);
+        setFileError('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const formatFileSize = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (fileError) return;
+        if (!editId && !insuranceFile) {
+            setFileError('Insurance document is required');
+            return;
+        }
+        setSubmitting(true);
+
         const payload = { ...form, capacity: Number(form.capacity), manufactureYear: Number(form.manufactureYear) };
+        const formData = new FormData();
+        formData.append('vehicle', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+        if (insuranceFile) formData.append('insuranceFile', insuranceFile);
+
         try {
             if (editId) {
-                await api.put(`/vehicles/${editId}`, payload);
+                await api.put(`/vehicles/${editId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Vehicle updated');
             } else {
-                await api.post('/vehicles', payload);
+                await api.post('/vehicles', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Vehicle created');
             }
             setShowModal(false);
             loadVehicles();
-        } catch { /* handled */ }
+        } catch { /* handled */ } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -113,6 +181,7 @@ export default function Vehicles() {
                                     <th>Fuel</th>
                                     <th>Capacity</th>
                                     <th>Branch</th>
+                                    <th>Insurance Doc</th>
                                     <th>Status</th>
                                     {canEdit && <th className="text-right">Actions</th>}
                                 </tr>
@@ -126,6 +195,21 @@ export default function Vehicles() {
                                         <td>{v.fuelType}</td>
                                         <td>{v.capacity}T</td>
                                         <td>{v.branchName || '—'}</td>
+                                        <td>
+                                            {v.insuranceFileUrl ? (
+                                                <button
+                                                    className="btn btn-ghost btn-sm"
+                                                    onClick={() => window.open(v.insuranceFileUrl, '_blank')}
+                                                    title="View Document"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                                >
+                                                    <HiEye size={15} style={{ color: 'var(--blue-500)' }} />
+                                                    <span style={{ fontSize: 12, color: 'var(--blue-600)', fontWeight: 600 }}>View</span>
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>—</span>
+                                            )}
+                                        </td>
                                         <td><span className={`badge ${v.status === 'ACTIVE' ? 'badge-green' : v.status === 'IN_MAINTENANCE' ? 'badge-amber' : 'badge-gray'}`}>{v.status}</span></td>
                                         {canEdit && (
                                             <td className="text-right">
@@ -174,7 +258,7 @@ export default function Vehicles() {
                                     <div className="form-group">
                                         <label className="form-label">Vehicle Type</label>
                                         <select className="form-select" name="vehicleType" value={form.vehicleType} onChange={onChange}>
-                                            {types.map(t => <option key={t} value={t}>{t}</option>)}
+                                            {vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -238,10 +322,56 @@ export default function Vehicles() {
                                         <label className="form-label">Tax Expiry</label>
                                         <input className="form-input" name="taxExpiry" type="date" value={form.taxExpiry} onChange={onChange} />
                                     </div>
+                                    <div className="form-group full-width" style={{ marginTop: 12 }}>
+                                        <label className="form-label">
+                                            Insurance Document {!editId && <span style={{ color: 'var(--red-500)' }}>*</span>}
+                                            <span style={{ fontWeight: 400, color: 'var(--gray-400)', marginLeft: 6 }}>(PDF / Image, max 1MB)</span>
+                                        </label>
+                                        <div className={`file-upload-area ${fileError ? 'file-upload-error' : ''} ${insuranceFile ? 'file-upload-filled' : ''}`}>
+                                            {!insuranceFile ? (
+                                                <label className="file-upload-label" htmlFor="insurance-file-input">
+                                                    <HiUpload size={24} className="file-upload-icon" />
+                                                    <span className="file-upload-text">Click to upload insurance</span>
+                                                    <span className="file-upload-hint">PDF or Image up to 1MB</span>
+                                                    <input
+                                                        ref={fileInputRef}
+                                                        id="insurance-file-input"
+                                                        type="file"
+                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                        onChange={handleFileChange}
+                                                        className="file-upload-input"
+                                                    />
+                                                </label>
+                                            ) : (
+                                                <div className="file-upload-preview">
+                                                    <div className="file-upload-file-info">
+                                                        <HiDocumentText size={20} style={{ color: 'var(--blue-500)', flexShrink: 0 }} />
+                                                        <div className="file-upload-details">
+                                                            <span className="file-upload-name">{insuranceFile.name}</span>
+                                                            <span className="file-upload-size">{formatFileSize(insuranceFile.size)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" className="file-upload-remove" onClick={removeFile} title="Remove file">
+                                                        <HiX size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {fileError && (
+                                            <span className="file-upload-error-text"><HiExclamation size={14} /> {fileError}</span>
+                                        )}
+                                        {editId && !insuranceFile && (
+                                            <span style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
+                                                Leave empty to keep the existing insurance document
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="form-actions">
                                     <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">{editId ? 'Update' : 'Create'}</button>
+                                    <button type="submit" className="btn btn-primary" disabled={submitting || !!fileError}>
+                                        {submitting ? 'Saving...' : editId ? 'Update' : 'Create'}
+                                    </button>
                                 </div>
                             </form>
                         </div>

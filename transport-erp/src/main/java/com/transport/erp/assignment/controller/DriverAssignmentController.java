@@ -44,6 +44,13 @@ public class DriverAssignmentController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/released")
+    @PreAuthorize("hasAuthority('ASSIGNMENT_VIEW')")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getReleasedAssignments() {
+        List<AssignmentResponse> response = assignmentService.getReleasedAssignments();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @GetMapping("/vehicle/{vehicleId}/active")
     @PreAuthorize("hasAuthority('ASSIGNMENT_VIEW')")
     public ResponseEntity<ApiResponse<AssignmentResponse>> getActiveAssignmentByVehicle(

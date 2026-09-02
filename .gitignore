@@ -1,0 +1,10 @@
+transport-erp/bg-image.jpg
+transport-erp-ui/public/bg-image.jpg
+transport-erp-ui/public/new-bg.png
+transport-erp-ui/src/assets/new-bg.png
+uploads/documents/5e115f48-bf49-4ad9-9d21-445ed5536f1d.jpg
+uploads/documents/1815e694-aa70-4857-8f8c-19acddf86a2a.jpg
+
+# Docker
+.env
+credentials.env

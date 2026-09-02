@@ -1,0 +1,39 @@
+services:
+  # ─── Spring Boot Backend ───────────────────────────────────────
+  backend:
+    build:
+      context: ./transport-erp
+      dockerfile: Dockerfile
+    container_name: transport-erp-backend
+    env_file:
+      - credentials.env
+    ports:
+      - "8081:8081"
+    volumes:
+      - upload_data:/app/uploads/documents
+    networks:
+      - transport-network
+    restart: unless-stopped
+
+  # ─── React Frontend (Nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./transport-erp-ui
+      dockerfile: Dockerfile
+    container_name: transport-erp-frontend
+    ports:
+      - "80:80"
+    networks:
+      - transport-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  upload_data:
+  pgadmin_data:
+
+networks:
+  transport-network:
+    driver: bridge

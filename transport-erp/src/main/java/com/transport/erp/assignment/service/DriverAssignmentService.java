@@ -19,108 +19,148 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.transport.erp.auth.security.SecurityService;
+
 @Service
 @RequiredArgsConstructor
 public class DriverAssignmentService {
 
-    private final DriverAssignmentRepository assignmentRepository;
-    private final DriverRepository driverRepository;
-    private final VehicleRepository vehicleRepository;
+        private final DriverAssignmentRepository assignmentRepository;
+        private final DriverRepository driverRepository;
+        private final VehicleRepository vehicleRepository;
+        private final SecurityService securityService;
 
-    @Transactional
-    public AssignmentResponse assignDriverToVehicle(AssignmentRequest request) {
-        Driver driver = driverRepository.findById(request.getDriverId())
-                .orElseThrow(() -> new ResourceNotFoundException("Driver", "id", request.getDriverId()));
+        @Transactional
+        public AssignmentResponse assignDriverToVehicle(AssignmentRequest request) {
+                Driver driver = driverRepository.findById(request.getDriverId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Driver", "id",
+                                                request.getDriverId()));
 
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id", request.getVehicleId()));
+                Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "id",
+                                                request.getVehicleId()));
 
-        // Check if driver already has an active assignment
-        assignmentRepository.findActiveAssignmentByDriver(driver.getId())
-                .ifPresent(existing -> {
-                    throw new IllegalArgumentException(
-                            "Driver " + driver.getName() + " is already assigned to vehicle "
-                                    + existing.getVehicle().getRegistrationNumber());
-                });
+                // ── Conflict check 1: driver already assigned ────────────────────────────
+                assignmentRepository.findActiveAssignmentByDriver(driver.getId())
+                                .ifPresent(existing -> {
+                                        throw new IllegalArgumentException(
+                                                        "Driver '" + driver.getName()
+                                                                        + "' is already actively assigned to vehicle '"
+                                                                        + existing.getVehicle().getRegistrationNumber()
+                                                                        + "'. Please release the current assignment first.");
+                                });
 
-        DriverAssignment assignment = DriverAssignment.builder()
-                .driver(driver)
-                .vehicle(vehicle)
-                .tripId(request.getTripId())
-                .assignedAt(Instant.now())
-                .role(request.getRole() != null
-                        ? AssignmentRole.valueOf(request.getRole().toUpperCase())
-                        : AssignmentRole.PRIMARY_DRIVER)
-                .remarks(request.getRemarks())
-                .build();
+                // ── Conflict check 2: vehicle already assigned ───────────────────────────
+                assignmentRepository.findActiveAssignmentByVehicle(vehicle.getId())
+                                .ifPresent(existing -> {
+                                        throw new IllegalArgumentException(
+                                                        "Vehicle '" + vehicle.getRegistrationNumber()
+                                                                        + "' is already actively assigned to driver '"
+                                                                        + existing.getDriver().getName()
+                                                                        + "'. Please release the current assignment first.");
+                                });
 
-        return mapToResponse(assignmentRepository.save(assignment));
-    }
+                DriverAssignment assignment = DriverAssignment.builder()
+                                .driver(driver)
+                                .vehicle(vehicle)
+                                .tripId(request.getTripId())
+                                .assignedAt(Instant.now())
+                                .role(request.getRole() != null
+                                                ? AssignmentRole.valueOf(request.getRole().toUpperCase())
+                                                : AssignmentRole.PRIMARY_DRIVER)
+                                .remarks(request.getRemarks())
+                                .build();
 
-    @Transactional
-    public AssignmentResponse releaseAssignment(UUID assignmentId) {
-        DriverAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assignment", "id", assignmentId));
-
-        if (assignment.getReleasedAt() != null) {
-            throw new IllegalArgumentException("Assignment is already released");
+                return mapToResponse(assignmentRepository.save(assignment));
         }
 
-        assignment.setReleasedAt(Instant.now());
-        return mapToResponse(assignmentRepository.save(assignment));
-    }
+        @Transactional
+        public AssignmentResponse releaseAssignment(UUID assignmentId) {
+                DriverAssignment assignment = assignmentRepository.findById(assignmentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Assignment", "id", assignmentId));
 
-    @Transactional(readOnly = true)
-    public List<AssignmentResponse> getActiveAssignments() {
-        return assignmentRepository.findAllActiveAssignments().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+                if (assignment.getReleasedAt() != null) {
+                        throw new IllegalArgumentException("Assignment is already released");
+                }
 
-    @Transactional(readOnly = true)
-    public AssignmentResponse getActiveAssignmentByVehicle(UUID vehicleId) {
-        DriverAssignment assignment = assignmentRepository.findActiveAssignmentByVehicle(vehicleId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No active assignment found for vehicle: " + vehicleId));
-        return mapToResponse(assignment);
-    }
+                assignment.setReleasedAt(Instant.now());
+                return mapToResponse(assignmentRepository.save(assignment));
+        }
 
-    @Transactional(readOnly = true)
-    public AssignmentResponse getActiveAssignmentByDriver(UUID driverId) {
-        DriverAssignment assignment = assignmentRepository.findActiveAssignmentByDriver(driverId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No active assignment found for driver: " + driverId));
-        return mapToResponse(assignment);
-    }
+        @Transactional(readOnly = true)
+        public List<AssignmentResponse> getActiveAssignments() {
+                com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+                if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                                && currentUser.getBranch() != null) {
+                        return assignmentRepository.findAllActiveAssignmentsByBranch(currentUser.getBranch().getId())
+                                        .stream()
+                                        .map(this::mapToResponse)
+                                        .collect(Collectors.toList());
+                }
+                return assignmentRepository.findAllActiveAssignments().stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
+        }
 
-    @Transactional(readOnly = true)
-    public List<AssignmentResponse> getAssignmentHistoryByVehicle(UUID vehicleId) {
-        return assignmentRepository.findByVehicleId(vehicleId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        @Transactional(readOnly = true)
+        public List<AssignmentResponse> getReleasedAssignments() {
+                com.transport.erp.auth.domain.User currentUser = securityService.getCurrentUser();
+                if (currentUser != null && currentUser.getRole() == com.transport.erp.auth.domain.RoleType.BRANCH_ADMIN
+                                && currentUser.getBranch() != null) {
+                        return assignmentRepository.findAllReleasedAssignmentsByBranch(currentUser.getBranch().getId())
+                                        .stream()
+                                        .map(this::mapToResponse)
+                                        .collect(Collectors.toList());
+                }
+                return assignmentRepository.findAllReleasedAssignments().stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
+        }
 
-    @Transactional(readOnly = true)
-    public List<AssignmentResponse> getAssignmentHistoryByDriver(UUID driverId) {
-        return assignmentRepository.findByDriverId(driverId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        @Transactional(readOnly = true)
+        public AssignmentResponse getActiveAssignmentByVehicle(UUID vehicleId) {
+                DriverAssignment assignment = assignmentRepository.findActiveAssignmentByVehicle(vehicleId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "No active assignment found for vehicle: " + vehicleId));
+                return mapToResponse(assignment);
+        }
 
-    private AssignmentResponse mapToResponse(DriverAssignment assignment) {
-        return AssignmentResponse.builder()
-                .id(assignment.getId())
-                .driverId(assignment.getDriver().getId())
-                .driverName(assignment.getDriver().getName())
-                .driverEmployeeCode(assignment.getDriver().getEmployeeCode())
-                .vehicleId(assignment.getVehicle().getId())
-                .vehicleRegistrationNumber(assignment.getVehicle().getRegistrationNumber())
-                .tripId(assignment.getTripId())
-                .assignedAt(assignment.getAssignedAt())
-                .releasedAt(assignment.getReleasedAt())
-                .role(assignment.getRole().name())
-                .remarks(assignment.getRemarks())
-                .active(assignment.getReleasedAt() == null)
-                .build();
-    }
+        @Transactional(readOnly = true)
+        public AssignmentResponse getActiveAssignmentByDriver(UUID driverId) {
+                DriverAssignment assignment = assignmentRepository.findActiveAssignmentByDriver(driverId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "No active assignment found for driver: " + driverId));
+                return mapToResponse(assignment);
+        }
+
+        @Transactional(readOnly = true)
+        public List<AssignmentResponse> getAssignmentHistoryByVehicle(UUID vehicleId) {
+                return assignmentRepository.findByVehicleId(vehicleId).stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
+        }
+
+        @Transactional(readOnly = true)
+        public List<AssignmentResponse> getAssignmentHistoryByDriver(UUID driverId) {
+                return assignmentRepository.findByDriverId(driverId).stream()
+                                .map(this::mapToResponse)
+                                .collect(Collectors.toList());
+        }
+
+        private AssignmentResponse mapToResponse(DriverAssignment assignment) {
+                return AssignmentResponse.builder()
+                                .id(assignment.getId())
+                                .driverId(assignment.getDriver().getId())
+                                .driverName(assignment.getDriver().getName())
+                                .driverEmployeeCode(assignment.getDriver().getEmployeeCode())
+                                .vehicleId(assignment.getVehicle().getId())
+                                .vehicleRegistrationNumber(assignment.getVehicle().getRegistrationNumber())
+                                .tripId(assignment.getTripId())
+                                .assignedAt(assignment.getAssignedAt())
+                                .releasedAt(assignment.getReleasedAt())
+                                .role(assignment.getRole().name())
+                                .remarks(assignment.getRemarks())
+                                .active(assignment.getReleasedAt() == null)
+                                .build();
+        }
 }

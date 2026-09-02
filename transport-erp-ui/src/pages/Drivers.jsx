@@ -10,19 +10,23 @@ const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg'];
 const emptyDriver = {
     employeeCode: '', name: '', phone: '', alternatePhone: '', dateOfBirth: '', joiningDate: '',
     address: '', city: '', state: '', pinCode: '', aadharNumber: '', panNumber: '', bloodGroup: '',
-    branchId: '', licenses: [{ licenseNumber: '', licenseType: 'HMV', issuingAuthority: '', issueDate: '', expiryDate: '', isPrimary: true }],
-    emergencyContacts: [{ name: '', relationship: '', phone: '', address: '', isPrimary: true }]
+    branchId: '',
+    // License (flat)
+    licenseNumber: '', licenseType: 'HMV', licenseIssuingAuthority: '', licenseIssueDate: '', licenseExpiryDate: '',
+    // Emergency contact (flat)
+    ecName: '', ecRelationship: '', ecPhone: '', ecAlternatePhone: '', ecAddress: '',
 };
 
 export default function Drivers() {
     const { hasPermission } = useAuth();
     const canEdit = hasPermission('DRIVER_EDIT');
+    const canViewLicense = hasPermission('DRIVER_MEDICAL_VIEW');
     const [drivers, setDrivers] = useState([]);
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editId, setEditId] = useState(null);
-    const [form, setForm] = useState(JSON.parse(JSON.stringify(emptyDriver)));
+    const [form, setForm] = useState({ ...emptyDriver });
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState('');
@@ -62,7 +66,7 @@ export default function Drivers() {
     };
 
     const openCreate = () => {
-        setForm(JSON.parse(JSON.stringify(emptyDriver)));
+        setForm({ ...emptyDriver });
         setEditId(null);
         setLicenseFile(null);
         setFileError('');
@@ -76,8 +80,13 @@ export default function Drivers() {
             joiningDate: d.joiningDate || '', address: d.address || '', city: d.city || '',
             state: d.state || '', pinCode: d.pinCode || '', aadharNumber: d.aadharNumber || '',
             panNumber: d.panNumber || '', bloodGroup: d.bloodGroup || '', branchId: d.branchId || '',
-            licenses: d.licenses?.length ? d.licenses : emptyDriver.licenses,
-            emergencyContacts: d.emergencyContacts?.length ? d.emergencyContacts : emptyDriver.emergencyContacts,
+            // License
+            licenseNumber: d.licenseNumber || '', licenseType: d.licenseType || 'HMV',
+            licenseIssuingAuthority: d.licenseIssuingAuthority || '',
+            licenseIssueDate: d.licenseIssueDate || '', licenseExpiryDate: d.licenseExpiryDate || '',
+            // Emergency contact
+            ecName: d.ecName || '', ecRelationship: d.ecRelationship || '',
+            ecPhone: d.ecPhone || '', ecAlternatePhone: d.ecAlternatePhone || '', ecAddress: d.ecAddress || '',
         });
         setEditId(d.id);
         setLicenseFile(null);
@@ -88,26 +97,19 @@ export default function Drivers() {
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         setFileError('');
-
-        if (!selectedFile) {
-            setLicenseFile(null);
-            return;
-        }
-
+        if (!selectedFile) { setLicenseFile(null); return; }
         if (selectedFile.size > MAX_FILE_SIZE) {
             setFileError(`File size (${(selectedFile.size / 1024 / 1024).toFixed(2)}MB) exceeds the 1MB limit`);
             setLicenseFile(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
-
         if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
             setFileError('Only PDF and JPEG files are allowed');
             setLicenseFile(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
-
         setLicenseFile(selectedFile);
     };
 
@@ -135,31 +137,23 @@ export default function Drivers() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (fileError) return;
-
-        // For create, license file is mandatory
         if (!editId && !licenseFile) {
             setFileError('Driving license file is required');
             return;
         }
-
         setSubmitting(true);
-
         const formData = new FormData();
-        formData.append('driver', new Blob([JSON.stringify(form)], { type: 'application/json' }));
-        if (licenseFile) {
-            formData.append('licenseFile', licenseFile);
-        }
+        // Send form fields as JSON blob
+        const payload = { ...form };
+        formData.append('driver', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+        if (licenseFile) formData.append('licenseFile', licenseFile);
 
         try {
             if (editId) {
-                await api.put(`/drivers/${editId}`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.put(`/drivers/${editId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Driver updated');
             } else {
-                await api.post('/drivers', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post('/drivers', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Driver created');
             }
             setShowModal(false);
@@ -170,16 +164,6 @@ export default function Drivers() {
     };
 
     const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-    const onLicenseChange = (e) => {
-        const updated = [...form.licenses];
-        updated[0] = { ...updated[0], [e.target.name]: e.target.value };
-        setForm({ ...form, licenses: updated });
-    };
-    const onEmergencyChange = (e) => {
-        const updated = [...form.emergencyContacts];
-        updated[0] = { ...updated[0], [e.target.name]: e.target.value };
-        setForm({ ...form, emergencyContacts: updated });
-    };
 
     if (loading) return <div className="page-loader"><div className="spinner"></div></div>;
 
@@ -212,19 +196,19 @@ export default function Drivers() {
                 <div className="table-wrapper">
                     {drivers.length > 0 ? (
                         <table>
-                            <thead>
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Name</th>
-                                    <th>Phone</th>
-                                    <th>City</th>
-                                    <th>Blood Group</th>
-                                    <th>Branch</th>
-                                    <th>License</th>
-                                    <th>Status</th>
-                                    {canEdit && <th className="text-right">Actions</th>}
-                                </tr>
-                            </thead>
+                            <thead><tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>City</th>
+                                <th>Blood Group</th>
+                                <th>Branch</th>
+                                <th>License No.</th>
+                                <th>License Expiry</th>
+                                {canViewLicense && <th>License File</th>}
+                                <th>Status</th>
+                                {canEdit && <th className="text-right">Actions</th>}
+                            </tr></thead>
                             <tbody>
                                 {drivers.map(d => (
                                     <tr key={d.id}>
@@ -234,21 +218,35 @@ export default function Drivers() {
                                         <td>{d.city}</td>
                                         <td>{d.bloodGroup}</td>
                                         <td>{d.branchName || '—'}</td>
+                                        <td>{d.licenseNumber || '—'}</td>
                                         <td>
-                                            {d.licenseFileUrl ? (
-                                                <button
-                                                    className="btn btn-ghost btn-sm"
-                                                    onClick={() => window.open(d.licenseFileUrl, '_blank')}
-                                                    title="View driving license"
-                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                                >
-                                                    <HiEye size={15} style={{ color: 'var(--blue-500)' }} />
-                                                    <span style={{ fontSize: 12, color: 'var(--blue-600)', fontWeight: 600 }}>View</span>
-                                                </button>
-                                            ) : (
-                                                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>No file</span>
-                                            )}
+                                            {d.licenseExpiryDate ? (
+                                                <span style={{
+                                                    color: new Date(d.licenseExpiryDate) < new Date()
+                                                        ? 'var(--red-500)' : 'var(--gray-700)',
+                                                    fontWeight: new Date(d.licenseExpiryDate) < new Date() ? 600 : 400
+                                                }}>
+                                                    {d.licenseExpiryDate}
+                                                </span>
+                                            ) : '—'}
                                         </td>
+                                        {canViewLicense && (
+                                            <td>
+                                                {d.licenseFileUrl ? (
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
+                                                        onClick={() => window.open(d.licenseFileUrl, '_blank')}
+                                                        title="View driving license"
+                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                                    >
+                                                        <HiEye size={15} style={{ color: 'var(--blue-500)' }} />
+                                                        <span style={{ fontSize: 12, color: 'var(--blue-600)', fontWeight: 600 }}>View</span>
+                                                    </button>
+                                                ) : (
+                                                    <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>No file</span>
+                                                )}
+                                            </td>
+                                        )}
                                         <td><span className={`badge ${d.status === 'ACTIVE' ? 'badge-green' : d.status === 'ON_LEAVE' ? 'badge-amber' : 'badge-red'}`}>{d.status}</span></td>
                                         {canEdit && (
                                             <td className="text-right">
@@ -289,7 +287,9 @@ export default function Drivers() {
                         </div>
                         <div className="modal-body">
                             <form onSubmit={handleSubmit}>
-                                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Personal Info</p>
+
+                                {/* ── Personal Info ─────────────────────── */}
+                                <p className="form-section-label">Personal Info</p>
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Employee Code *</label>
@@ -352,30 +352,31 @@ export default function Drivers() {
                                     </div>
                                 </div>
 
-                                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: 1, margin: '24px 0 12px' }}>License Info</p>
+                                {/* ── License Info ───────────────────────── */}
+                                <p className="form-section-label" style={{ marginTop: 24 }}>License Info</p>
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">License Number</label>
-                                        <input className="form-input" name="licenseNumber" value={form.licenses[0]?.licenseNumber || ''} onChange={onLicenseChange} />
+                                        <input className="form-input" name="licenseNumber" value={form.licenseNumber} onChange={onChange} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">License Type</label>
-                                        <input className="form-input" name="licenseType" value={form.licenses[0]?.licenseType || ''} onChange={onLicenseChange} placeholder="e.g. HMV" />
+                                        <input className="form-input" name="licenseType" value={form.licenseType} onChange={onChange} placeholder="e.g. HMV" />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Issuing Authority</label>
-                                        <input className="form-input" name="issuingAuthority" value={form.licenses[0]?.issuingAuthority || ''} onChange={onLicenseChange} />
+                                        <input className="form-input" name="licenseIssuingAuthority" value={form.licenseIssuingAuthority} onChange={onChange} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Issue Date</label>
-                                        <input className="form-input" name="issueDate" type="date" value={form.licenses[0]?.issueDate || ''} onChange={onLicenseChange} />
+                                        <input className="form-input" name="licenseIssueDate" type="date" value={form.licenseIssueDate} onChange={onChange} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Expiry Date</label>
-                                        <input className="form-input" name="expiryDate" type="date" value={form.licenses[0]?.expiryDate || ''} onChange={onLicenseChange} />
+                                        <input className="form-input" name="licenseExpiryDate" type="date" value={form.licenseExpiryDate} onChange={onChange} />
                                     </div>
 
-                                    {/* License File Upload — Mandatory for new drivers */}
+                                    {/* License File Upload */}
                                     <div className="form-group full-width">
                                         <label className="form-label">
                                             Driving License Document {!editId && <span style={{ color: 'var(--red-500)' }}>*</span>}
@@ -412,9 +413,7 @@ export default function Drivers() {
                                             )}
                                         </div>
                                         {fileError && (
-                                            <span className="file-upload-error-text">
-                                                <HiExclamation size={14} /> {fileError}
-                                            </span>
+                                            <span className="file-upload-error-text"><HiExclamation size={14} /> {fileError}</span>
                                         )}
                                         {editId && !licenseFile && (
                                             <span style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4, display: 'block' }}>
@@ -424,19 +423,28 @@ export default function Drivers() {
                                     </div>
                                 </div>
 
-                                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: 1, margin: '24px 0 12px' }}>Emergency Contact</p>
+                                {/* ── Emergency Contact ──────────────────── */}
+                                <p className="form-section-label" style={{ marginTop: 24 }}>Emergency Contact</p>
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Contact Name</label>
-                                        <input className="form-input" name="name" value={form.emergencyContacts[0]?.name || ''} onChange={onEmergencyChange} />
+                                        <input className="form-input" name="ecName" value={form.ecName} onChange={onChange} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Relationship</label>
-                                        <input className="form-input" name="relationship" value={form.emergencyContacts[0]?.relationship || ''} onChange={onEmergencyChange} />
+                                        <input className="form-input" name="ecRelationship" value={form.ecRelationship} onChange={onChange} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Contact Phone</label>
-                                        <input className="form-input" name="phone" value={form.emergencyContacts[0]?.phone || ''} onChange={onEmergencyChange} />
+                                        <input className="form-input" name="ecPhone" value={form.ecPhone} onChange={onChange} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Alternate Phone</label>
+                                        <input className="form-input" name="ecAlternatePhone" value={form.ecAlternatePhone} onChange={onChange} />
+                                    </div>
+                                    <div className="form-group full-width">
+                                        <label className="form-label">Address</label>
+                                        <input className="form-input" name="ecAddress" value={form.ecAddress} onChange={onChange} />
                                     </div>
                                 </div>
 

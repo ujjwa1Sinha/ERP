@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import useInactivityLogout from '../hooks/useInactivityLogout';
 import {
     HiOutlineViewGrid, HiOutlineOfficeBuilding, HiOutlineTruck,
-    HiOutlineUserGroup, HiOutlineDocumentText, HiOutlineLink,
+    HiOutlineUserGroup, HiOutlineLink,
     HiOutlineUsers, HiOutlineLogout, HiMenu, HiX
 } from 'react-icons/hi';
 
@@ -17,7 +18,6 @@ const navItems = [
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
     { path: '/assignments', label: 'Assignments', icon: HiOutlineLink, requiredPermission: 'ASSIGNMENT_VIEW' },
-    { path: '/documents', label: 'Documents', icon: HiOutlineDocumentText, requiredPermission: 'DOCUMENT_VIEW' },
     { section: 'Administration' },
     { path: '/users', label: 'Users', icon: HiOutlineUsers, requiredPermission: 'USER_VIEW' },
 ];
@@ -27,7 +27,6 @@ const pageTitles = {
     '/branches': 'Branches',
     '/vehicles': 'Vehicles',
     '/drivers': 'Drivers',
-    '/documents': 'Documents',
     '/assignments': 'Assignments',
     '/users': 'User Management',
 };
@@ -36,8 +35,31 @@ export default function Layout() {
     const { user, logout, hasPermission } = useAuth();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const pageTitle = pageTitles[location.pathname] || 'Transport ERP';
+    const [showWarning, setShowWarning] = useState(false);
+    const [countdown, setCountdown] = useState(60);
+    const pageTitle = pageTitles[location.pathname] || 'Central Transport';
     const initials = user?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+
+    const handleWarn = (secondsLeft) => {
+        setShowWarning(true);
+        setCountdown(secondsLeft ?? 60);
+    };
+
+    const handleResume = () => {
+        setShowWarning(false);
+    };
+
+    const handleLogout = () => {
+        setShowWarning(false);
+        logout();
+    };
+
+    useInactivityLogout({
+        onLogout: handleLogout,
+        onWarn: handleWarn,
+        onResume: handleResume,
+        enabled: !!user,
+    });
 
     // Filter nav items based on user permissions
     const filteredNavItems = navItems.filter(item => {
@@ -81,7 +103,7 @@ export default function Layout() {
                     <div className="sidebar-logo">
                         <div className="sidebar-logo-icon">🚛</div>
                         <div className="sidebar-logo-text">
-                            <h1>Transport ERP</h1>
+                            <h1>Central Transport</h1>
                             <span>Fleet Management</span>
                         </div>
                     </div>
@@ -150,6 +172,36 @@ export default function Layout() {
                     <Outlet />
                 </div>
             </div>
+
+            {/* Inactivity Warning Banner */}
+            {showWarning && (
+                <div style={{
+                    position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+                    background: '#78350f', color: '#fef3c7', borderRadius: 12,
+                    padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 16,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.35)', zIndex: 9999,
+                    border: '1px solid #f59e0b', minWidth: 340, maxWidth: '90vw',
+                    animation: 'slideUp 0.3s ease'
+                }}>
+                    <span style={{ fontSize: 22 }}>⏱️</span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>Session expiring soon</div>
+                        <div style={{ fontSize: 13, opacity: 0.85 }}>
+                            You'll be logged out in <strong>{Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</strong> due to inactivity.
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleResume}
+                        style={{
+                            background: '#f59e0b', color: '#1c1917', border: 'none',
+                            borderRadius: 8, padding: '7px 16px', fontWeight: 700,
+                            fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Stay logged in
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

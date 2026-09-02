@@ -33,7 +33,7 @@ export default function Login() {
                     <div className="login-logo">
                         <HiOutlineTruck size={28} />
                     </div>
-                    <h1>Transport ERP</h1>
+                    <h1>Central Transport</h1>
                     <p>Sign in to manage your fleet</p>
                 </div>
 

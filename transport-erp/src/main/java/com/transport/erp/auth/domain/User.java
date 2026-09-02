@@ -5,9 +5,6 @@ import com.transport.erp.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "username"),
@@ -43,8 +40,9 @@ public class User extends BaseEntity {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    /** Single role stored directly on the user — no join table needed. */
     @Builder.Default
-    private Set<Role> roles = new HashSet<>();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 30)
+    private RoleType role = RoleType.VIEWER;
 }

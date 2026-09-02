@@ -10,7 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.transport.erp.common.service.SupabaseStorageService;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,13 +25,37 @@ import java.util.UUID;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final ObjectMapper objectMapper;
+    private final SupabaseStorageService storageService;
 
-    @PostMapping
+    private static final long MAX_FILE_SIZE = 1_048_576; // 1MB
+    private static final List<String> ALLOWED_TYPES = List.of(
+            "application/pdf", "image/jpeg", "image/jpg", "image/png");
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('VEHICLE_EDIT')")
-    public ResponseEntity<ApiResponse<VehicleResponse>> createVehicle(@Valid @RequestBody VehicleRequest request) {
+    public ResponseEntity<ApiResponse<VehicleResponse>> createVehicle(
+            @RequestPart("vehicle") String vehicleJson,
+            @RequestPart(value = "insuranceFile", required = false) MultipartFile insuranceFile)
+            throws java.io.IOException {
+
+        VehicleRequest request = objectMapper.readValue(vehicleJson, VehicleRequest.class);
+
+        if (insuranceFile != null && !insuranceFile.isEmpty()) {
+            validateFile(insuranceFile);
+            String fileUrl = storageService.uploadFile(insuranceFile, "vehicles/insurance");
+            request.setInsuranceFileUrl(fileUrl);
+        }
+
         VehicleResponse response = vehicleService.createVehicle(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Vehicle created successfully", response));
+    }
+
+    @GetMapping("/types")
+    @PreAuthorize("hasAuthority('VEHICLE_VIEW')")
+    public ResponseEntity<ApiResponse<List<String>>> getVehicleTypes() {
+        return ResponseEntity.ok(ApiResponse.success(vehicleService.getAllVehicleTypes()));
     }
 
     @GetMapping
@@ -62,10 +90,22 @@ public class VehicleController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('VEHICLE_EDIT')")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
-            @PathVariable UUID id, @Valid @RequestBody VehicleRequest request) {
+            @PathVariable UUID id,
+            @RequestPart("vehicle") String vehicleJson,
+            @RequestPart(value = "insuranceFile", required = false) MultipartFile insuranceFile)
+            throws java.io.IOException {
+
+        VehicleRequest request = objectMapper.readValue(vehicleJson, VehicleRequest.class);
+
+        if (insuranceFile != null && !insuranceFile.isEmpty()) {
+            validateFile(insuranceFile);
+            String fileUrl = storageService.uploadFile(insuranceFile, "vehicles/insurance");
+            request.setInsuranceFileUrl(fileUrl);
+        }
+
         VehicleResponse response = vehicleService.updateVehicle(id, request);
         return ResponseEntity.ok(ApiResponse.success("Vehicle updated successfully", response));
     }
@@ -75,5 +115,17 @@ public class VehicleController {
     public ResponseEntity<ApiResponse<Void>> decommissionVehicle(@PathVariable UUID id) {
         vehicleService.decommissionVehicle(id);
         return ResponseEntity.ok(ApiResponse.success("Vehicle decommissioned successfully", null));
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("Insurance file exceeds 1MB limit. Size: "
+                    + (file.getSize() / 1024) + "KB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException(
+                    "Invalid file type. Only PDF and JPEG/PNG files are allowed.");
+        }
     }
 }

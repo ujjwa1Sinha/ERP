@@ -24,10 +24,16 @@ public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
     List<Driver> findByBranchId(UUID branchId);
 
+    Page<Driver> findByBranchId(UUID branchId, Pageable pageable);
+
     Page<Driver> findByStatus(DriverStatus status, Pageable pageable);
 
     @Query("SELECT d FROM Driver d WHERE LOWER(d.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Driver> searchByName(@Param("name") String name, Pageable pageable);
+
+    @Query("SELECT d FROM Driver d WHERE LOWER(d.name) LIKE LOWER(CONCAT('%', :name, '%')) AND d.branch.id = :branchId")
+    Page<Driver> searchByNameAndBranchId(@Param("name") String name, @Param("branchId") UUID branchId,
+            Pageable pageable);
 
     @Query("SELECT COUNT(d) FROM Driver d WHERE d.status = :status")
     long countByStatus(@Param("status") DriverStatus status);
