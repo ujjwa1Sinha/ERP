@@ -29,6 +29,30 @@ services:
       - backend
     restart: unless-stopped
 
+  # ─── Prometheus ───────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transport-erp-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - transport-network
+    restart: unless-stopped
+
+  # ─── Grafana ──────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transport-erp-grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - transport-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   upload_data:
