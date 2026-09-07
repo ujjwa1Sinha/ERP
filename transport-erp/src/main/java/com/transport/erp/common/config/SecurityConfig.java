@@ -27,7 +27,34 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
+    @org.springframework.beans.factory.annotation.Value("${management.security.username:prometheus}")
+    private String actuatorUsername;
+
+    @org.springframework.beans.factory.annotation.Value("${management.security.password:changeme}")
+    private String actuatorPassword;
+
     @Bean
+    @org.springframework.core.annotation.Order(1)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        var user = org.springframework.security.core.userdetails.User.withUsername(actuatorUsername)
+                .password(passwordEncoder().encode(actuatorPassword))
+                .roles("ACTUATOR")
+                .build();
+
+        http
+                .securityMatcher("/actuator/**")
+                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("ACTUATOR"))
+                .httpBasic(org.springframework.security.config.Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .userDetailsService(new org.springframework.security.provisioning.InMemoryUserDetailsManager(user));
+
+        return http.build();
+    }
+
+    @Bean
+    @org.springframework.core.annotation.Order(2)
+
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(org.springframework.security.config.Customizer.withDefaults())
@@ -39,7 +66,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/documents/files/**").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

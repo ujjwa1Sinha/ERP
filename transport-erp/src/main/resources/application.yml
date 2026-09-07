@@ -68,3 +68,21 @@ supabase:
     bucket: ${SUPABASE_S3_BUCKET:documents} # Change 'documents' to whatever you named your bucket
     access-key: ${SUPABASE_S3_ACCESS_KEY:dummy-access-key}
     secret-key: ${SUPABASE_S3_SECRET_KEY:dummy-secret-key}
+
+management:
+  security:
+    username: ${ACTUATOR_USERNAME:prometheus}
+    password: ${ACTUATOR_PASSWORD:changeme}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true

@@ -8,3 +8,4 @@ uploads/documents/1815e694-aa70-4857-8f8c-19acddf86a2a.jpg
 # Docker
 .env
 credentials.env
+.vscode/settings.json
