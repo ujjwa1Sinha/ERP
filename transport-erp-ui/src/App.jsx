@@ -8,6 +8,7 @@ import Vehicles from './pages/Vehicles';
 import Drivers from './pages/Drivers';
 import Documents from './pages/Documents';
 import Assignments from './pages/Assignments';
+import Trips from './pages/Trips';
 import Users from './pages/Users';
 
 function ProtectedRoute({ children }) {
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="drivers" element={<Drivers />} />
         <Route path="documents" element={<Documents />} />
         <Route path="assignments" element={<Assignments />} />
+        <Route path="trips" element={<Trips />} />
         <Route path="users" element={<Users />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
