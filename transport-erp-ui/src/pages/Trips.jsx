@@ -31,6 +31,14 @@ const extractCity = (addressStr) => {
     return addressStr.length > 20 ? addressStr.substring(0, 20) + '...' : addressStr;
 };
 
+const formatDuration = (seconds) => {
+    if (!seconds) return '—';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+};
+
 const STATUS_OPTIONS = ['', 'PLANNED', 'ASSIGNED', 'STARTED', 'IN_TRANSIT', 'HALTED', 'COMPLETED', 'CANCELLED'];
 
 const INITIAL_FORM = {
@@ -346,6 +354,8 @@ export default function Trips() {
                                 {selectedTrip.actualArrival && <InfoCard label="Actual Arrival" value={new Date(selectedTrip.actualArrival).toLocaleString('en-IN')} />}
                                 {selectedTrip.distancePlanned && <InfoCard label="Distance Planned" value={`${selectedTrip.distancePlanned} km`} />}
                                 {selectedTrip.distanceActual && <InfoCard label="Distance Actual" value={`${selectedTrip.distanceActual} km`} />}
+                                {selectedTrip.durationPlannedSeconds && <InfoCard label="Standard Duration (OSRM)" value={formatDuration(selectedTrip.durationPlannedSeconds)} />}
+                                {selectedTrip.durationActualSeconds && <InfoCard label="Actual Transit Duration" value={formatDuration(selectedTrip.durationActualSeconds)} />}
                             </div>
 
                             {selectedTrip.remarks && (

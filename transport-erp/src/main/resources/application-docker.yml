@@ -56,3 +56,11 @@ logging:
   level:
     com.transport.erp: INFO
     org.springframework.security: WARN
+
+brevo:
+  api:
+    key: ${BREVO_API_KEY:dummy-key}
+    sender:
+      email: ${BREVO_SENDER_EMAIL:ujjwals5801@gmail.com}
+    recipient:
+      email: ${BREVO_RECIPIENT_EMAIL:fill_me_out@example.com}

@@ -111,6 +111,12 @@ public class Trip extends BaseEntity {
     @Column(name = "distance_actual", precision = 10, scale = 2)
     private BigDecimal distanceActual;
 
+    @Column(name = "duration_planned_seconds")
+    private Long durationPlannedSeconds;
+
+    @Column(name = "duration_actual_seconds")
+    private Long durationActualSeconds;
+
     @Column(columnDefinition = "TEXT")
     private String remarks;
 

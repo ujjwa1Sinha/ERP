@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 @Slf4j
 public class RoutingService {
 
-    public record OsrmResult(String polyline, BigDecimal distanceKm) {
+    public record OsrmResult(String polyline, BigDecimal distanceKm, Long durationSeconds) {
     }
 
     private final RestTemplate restTemplate;
@@ -35,9 +35,10 @@ public class RoutingService {
                     JsonNode route = routes.get(0);
                     String polyline = route.path("geometry").asText();
                     double distanceMeters = route.path("distance").asDouble();
+                    Long durationSeconds = route.path("duration").asLong();
                     BigDecimal distanceKm = BigDecimal.valueOf(distanceMeters / 1000.0).setScale(2,
                             java.math.RoundingMode.HALF_UP);
-                    return new OsrmResult(polyline, distanceKm);
+                    return new OsrmResult(polyline, distanceKm, durationSeconds);
                 }
             }
             log.warn("OSRM routing failed to return a valid geometry.");

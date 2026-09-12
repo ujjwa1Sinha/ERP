@@ -87,6 +87,7 @@ public class TripService {
                 .destLat(destGeo.lat())
                 .destLng(destGeo.lng())
                 .routePolyline(osrmResult != null ? osrmResult.polyline() : null)
+                .durationPlannedSeconds(osrmResult != null ? osrmResult.durationSeconds() : null)
                 .build();
 
         // Optional FKs
@@ -197,6 +198,20 @@ public class TripService {
         trip.setActualArrival(Instant.now());
         if (distanceActual != null) {
             trip.setDistanceActual(distanceActual);
+        }
+
+        if (trip.getActualDeparture() != null) {
+            long actualSeconds = java.time.Duration.between(trip.getActualDeparture(), trip.getActualArrival())
+                    .getSeconds();
+            trip.setDurationActualSeconds(actualSeconds);
+            if (trip.getDurationPlannedSeconds() != null) {
+                long diff = actualSeconds - trip.getDurationPlannedSeconds();
+                if (diff > 900) { // 15 mins late
+                    notificationService.sendDelayAlert(trip, diff / 60);
+                } else if (diff < -900) { // 15 mins early
+                    notificationService.sendEarlyArrivalAlert(trip, Math.abs(diff) / 60);
+                }
+            }
         }
 
         if (trip.getVehicle() != null && trip.getDestLat() != null && trip.getDestLng() != null) {
@@ -354,6 +369,8 @@ public class TripService {
                 .tripType(trip.getTripType())
                 .distancePlanned(trip.getDistancePlanned())
                 .distanceActual(trip.getDistanceActual())
+                .durationPlannedSeconds(trip.getDurationPlannedSeconds())
+                .durationActualSeconds(trip.getDurationActualSeconds())
                 .remarks(trip.getRemarks())
                 .createdAt(trip.getCreatedAt())
                 .updatedAt(trip.getUpdatedAt())

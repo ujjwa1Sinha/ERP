@@ -55,6 +55,9 @@ public class TripResponse {
     private BigDecimal distancePlanned;
     private BigDecimal distanceActual;
 
+    private Long durationPlannedSeconds;
+    private Long durationActualSeconds;
+
     private String remarks;
 
     // Timeline
