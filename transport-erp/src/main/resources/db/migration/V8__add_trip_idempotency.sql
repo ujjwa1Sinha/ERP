@@ -1,0 +1,1 @@
+ALTER TABLE trips ADD COLUMN idempotency_key VARCHAR(100) UNIQUE;

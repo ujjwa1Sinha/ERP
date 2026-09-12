@@ -26,5 +26,8 @@ public class TripRequest {
     private Instant plannedArrival;
     private String tripType;
     private BigDecimal distancePlanned;
+
     private String remarks;
+
+    private String idempotencyKey;
 }

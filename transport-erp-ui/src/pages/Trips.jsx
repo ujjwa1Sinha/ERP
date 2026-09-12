@@ -7,6 +7,7 @@ import {
     HiOutlineClipboardList, HiTruck, HiOutlineUserGroup,
     HiArrowRight, HiOutlineClock
 } from 'react-icons/hi';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const STATUS_BADGE = {
     PLANNED: 'badge-blue',
@@ -15,15 +16,26 @@ const STATUS_BADGE = {
     IN_TRANSIT: 'badge-yellow',
     HALTED: 'badge-orange',
     COMPLETED: 'badge-green',
-    CANCELLED: 'badge-gray',
+    CANCELLED: 'badge-red'
+};
+
+const extractCity = (addressStr) => {
+    if (!addressStr) return 'Unknown';
+    const parts = addressStr.split(',').map(s => s.trim());
+    if (parts.length === 4) return parts[1]; // Common Format: Name, City, State, Country
+    if (parts.length === 3) return parts[0];
+    if (parts.length > 4) {
+        // Legacy verbose strings where City typically sits 4 indices from the end (before State/PIN/Country)
+        return parts[parts.length - 4];
+    }
+    return addressStr.length > 20 ? addressStr.substring(0, 20) + '...' : addressStr;
 };
 
 const STATUS_OPTIONS = ['', 'PLANNED', 'ASSIGNED', 'STARTED', 'IN_TRANSIT', 'HALTED', 'COMPLETED', 'CANCELLED'];
 
 const INITIAL_FORM = {
     source: '', destination: '', vehicleId: '', primaryDriverId: '',
-    secondaryDriverId: '', sourceBranchId: '', destinationBranchId: '',
-    plannedDeparture: '', plannedArrival: '', tripType: '', distancePlanned: '', remarks: ''
+    plannedDeparture: '', plannedArrival: '', tripType: '', remarks: ''
 };
 
 export default function Trips() {
@@ -46,9 +58,9 @@ export default function Trips() {
 
     // Form & dropdowns
     const [form, setForm] = useState(INITIAL_FORM);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [vehicles, setVehicles] = useState([]);
     const [drivers, setDrivers] = useState([]);
-    const [branches, setBranches] = useState([]);
     const [optionsLoaded, setOptionsLoaded] = useState(false);
 
     // ────────────────── DATA LOADING ──────────────────
@@ -76,14 +88,12 @@ export default function Trips() {
     const loadOptions = async () => {
         if (optionsLoaded) return;
         try {
-            const [vRes, dRes, bRes] = await Promise.all([
+            const [vRes, dRes] = await Promise.all([
                 api.get('/vehicles?size=1000'),
-                api.get('/drivers?size=1000'),
-                api.get('/branches?size=1000')
+                api.get('/drivers?size=1000')
             ]);
             setVehicles(vRes.data.data?.content || vRes.data.data || []);
             setDrivers(dRes.data.data?.content || dRes.data.data || []);
-            setBranches(bRes.data.data?.content || bRes.data.data || []);
             setOptionsLoaded(true);
         } catch { toast.error('Failed to load options'); }
     };
@@ -92,12 +102,13 @@ export default function Trips() {
 
     const handleCreate = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             const payload = { ...form };
             // convert date-local to ISO
             if (payload.plannedDeparture) payload.plannedDeparture = new Date(payload.plannedDeparture).toISOString();
             if (payload.plannedArrival) payload.plannedArrival = new Date(payload.plannedArrival).toISOString();
-            if (payload.distancePlanned) payload.distancePlanned = parseFloat(payload.distancePlanned);
             // clean empty strings
             Object.keys(payload).forEach(k => { if (payload[k] === '') delete payload[k]; });
 
@@ -108,7 +119,9 @@ export default function Trips() {
             loadTrips();
             loadStats();
         } catch (err) {
-            toast.error(err?.response?.data?.message || 'Failed to create trip');
+            toast.error(err?.response?.data?.message || 'Failed to create trip (or duplicate encountered)');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -137,7 +150,7 @@ export default function Trips() {
     };
 
     const openCreateModal = () => {
-        setForm(INITIAL_FORM);
+        setForm({ ...INITIAL_FORM, idempotencyKey: crypto.randomUUID() });
         setShowCreateModal(true);
         loadOptions();
     };
@@ -212,10 +225,10 @@ export default function Trips() {
                                 {trips.map(t => (
                                     <tr key={t.id}>
                                         <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{t.tripNumber}</td>
-                                        <td>
-                                            <span>{t.source}</span>
+                                        <td title={`${t.source} → ${t.destination}`}>
+                                            <span style={{ fontWeight: 600 }}>{extractCity(t.source)}</span>
                                             <HiArrowRight size={12} style={{ margin: '0 6px', color: 'var(--text-secondary)' }} />
-                                            <span>{t.destination}</span>
+                                            <span style={{ fontWeight: 600 }}>{extractCity(t.destination)}</span>
                                         </td>
                                         <td>{t.vehicleRegistrationNumber || <span style={{ color: 'var(--text-secondary)' }}>Unassigned</span>}</td>
                                         <td>{t.primaryDriverName || <span style={{ color: 'var(--text-secondary)' }}>Unassigned</span>}</td>
@@ -266,57 +279,34 @@ export default function Trips() {
                         <div className="modal-body">
                             <form onSubmit={handleCreate}>
                                 <div className="form-grid">
+                                    <AddressAutocomplete label="Source" name="source" value={form.source} onChange={onChange} required={true} placeholder="e.g. Connaught Place, New Delhi" />
+                                    <AddressAutocomplete label="Destination" name="destination" value={form.destination} onChange={onChange} required={true} placeholder="e.g. Cyber City, Gurgaon" />
+
                                     <div className="form-group">
-                                        <label className="form-label">Source *</label>
-                                        <input className="form-input" name="source" value={form.source} onChange={onChange} required placeholder="e.g. Delhi" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Destination *</label>
-                                        <input className="form-input" name="destination" value={form.destination} onChange={onChange} required placeholder="e.g. Lucknow" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Source Branch</label>
-                                        <select className="form-select" name="sourceBranchId" value={form.sourceBranchId} onChange={onChange}>
-                                            <option value="">Select Branch</option>
-                                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Destination Branch</label>
-                                        <select className="form-select" name="destinationBranchId" value={form.destinationBranchId} onChange={onChange}>
-                                            <option value="">Select Branch</option>
-                                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Vehicle</label>
+                                        <label className="form-label">Vehicle (Optional for Future Planning)</label>
                                         <select className="form-select" name="vehicleId" value={form.vehicleId} onChange={onChange}>
-                                            <option value="">Select Vehicle</option>
+                                            <option value="">Unassigned (Plan for later)</option>
                                             {vehicles.map(v => <option key={v.id} value={v.id}>{v.registrationNumber} {v.make ? `(${v.make})` : ''}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Primary Driver</label>
+                                        <label className="form-label">Primary Driver (Optional)</label>
                                         <select className="form-select" name="primaryDriverId" value={form.primaryDriverId} onChange={onChange}>
-                                            <option value="">Select Driver</option>
+                                            <option value="">Unassigned (Plan for later)</option>
                                             {drivers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.employeeCode || '—'})</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Planned Departure</label>
-                                        <input className="form-input" type="datetime-local" name="plannedDeparture" value={form.plannedDeparture} onChange={onChange} />
+                                        <label className="form-label">Planned Departure *</label>
+                                        <input className="form-input" type="datetime-local" name="plannedDeparture" value={form.plannedDeparture} onChange={onChange} required />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Planned Arrival</label>
-                                        <input className="form-input" type="datetime-local" name="plannedArrival" value={form.plannedArrival} onChange={onChange} />
+                                        <label className="form-label">Planned Arrival *</label>
+                                        <input className="form-input" type="datetime-local" name="plannedArrival" value={form.plannedArrival} onChange={onChange} required />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Trip Type</label>
-                                        <input className="form-input" name="tripType" value={form.tripType} onChange={onChange} placeholder="e.g. REGULAR, EXPRESS" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Planned Distance (km)</label>
-                                        <input className="form-input" type="number" step="0.01" name="distancePlanned" value={form.distancePlanned} onChange={onChange} />
+                                        <label className="form-label">Trip Type *</label>
+                                        <input className="form-input" name="tripType" value={form.tripType} onChange={onChange} placeholder="e.g. REGULAR, EXPRESS" required />
                                     </div>
                                     <div className="form-group full-width">
                                         <label className="form-label">Remarks</label>
@@ -324,8 +314,10 @@ export default function Trips() {
                                     </div>
                                 </div>
                                 <div className="form-actions">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Create Trip</button>
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)} disabled={isSubmitting}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Creating your trip...' : 'Create Trip'}
+                                    </button>
                                 </div>
                             </form>
                         </div>

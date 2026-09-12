@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +62,40 @@ public class Trip extends BaseEntity {
 
     @Column(name = "actual_arrival")
     private Instant actualArrival;
+
+    @Column(name = "idempotency_key", unique = true, length = 100)
+    private String idempotencyKey;
+
+    @Column(name = "source_lat", precision = 9, scale = 6)
+    private BigDecimal sourceLat;
+
+    @Column(name = "source_lng", precision = 9, scale = 6)
+    private BigDecimal sourceLng;
+
+    @Column(name = "dest_lat", precision = 9, scale = 6)
+    private BigDecimal destLat;
+
+    @Column(name = "dest_lng", precision = 9, scale = 6)
+    private BigDecimal destLng;
+
+    @Column(name = "wandered_alert_sent")
+    @Builder.Default
+    private Boolean wanderedAlertSent = false;
+
+    @Column(name = "route_polyline", columnDefinition = "TEXT")
+    private String routePolyline;
+
+    @Column(name = "deviation_alert_sent")
+    private Boolean deviationAlertSent = false;
+
+    @Column(name = "last_halt_start_time")
+    private LocalDateTime lastHaltStartTime;
+
+    @Column(name = "frequent_halts_count")
+    private Integer frequentHaltsCount = 0;
+
+    @Column(name = "last_halt_alert_time")
+    private LocalDateTime lastHaltAlertTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 25)

@@ -12,7 +12,14 @@ import com.transport.erp.trip.repository.TripRepository;
 import com.transport.erp.assignment.repository.DriverAssignmentRepository;
 import com.transport.erp.vehicle.domain.Vehicle;
 import com.transport.erp.vehicle.repository.VehicleRepository;
+import com.transport.erp.common.service.GeocodingService;
+import com.transport.erp.common.service.GeocodingService.GeoResult;
+import com.transport.erp.common.service.RoutingService;
+import com.transport.erp.common.service.NotificationService;
+import com.transport.erp.common.util.GeoUtils;
+import com.transport.erp.tracking.repository.VehicleLocationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,6 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TripService {
@@ -36,11 +44,33 @@ public class TripService {
     private final DriverRepository driverRepository;
     private final BranchRepository branchRepository;
     private final DriverAssignmentRepository driverAssignmentRepository;
+    private final GeocodingService geocodingService;
+    private final RoutingService routingService;
+    private final NotificationService notificationService;
+    private final VehicleLocationRepository vehicleLocationRepository;
 
     // ────────────────────────────── CREATE ──────────────────────────────
 
     @Transactional
     public TripResponse createTrip(TripRequest request) {
+        GeocodingService.GeoResult srcGeo = geocodingService.validateAndGeocode(request.getSource());
+        if (srcGeo == null) {
+            throw new IllegalArgumentException(
+                    "Invalid source address: OSM could not resolve to a street-level location.");
+        }
+        GeocodingService.GeoResult destGeo = geocodingService.validateAndGeocode(request.getDestination());
+        if (destGeo == null) {
+            throw new IllegalArgumentException(
+                    "Invalid destination address: OSM could not resolve to a street-level location.");
+        }
+
+        RoutingService.OsrmResult osrmResult = routingService.getOsrmPolyline(
+                srcGeo.lat(), srcGeo.lng(),
+                destGeo.lat(), destGeo.lng());
+        if (osrmResult != null) {
+            log.info("OSRM mapped geographic polyline established for trip ({} km)", osrmResult.distanceKm());
+        }
+
         Trip trip = Trip.builder()
                 .tripNumber(generateTripNumber())
                 .source(request.getSource())
@@ -48,9 +78,15 @@ public class TripService {
                 .plannedDeparture(request.getPlannedDeparture())
                 .plannedArrival(request.getPlannedArrival())
                 .tripType(request.getTripType())
-                .distancePlanned(request.getDistancePlanned())
+                .distancePlanned(osrmResult != null ? osrmResult.distanceKm() : request.getDistancePlanned())
                 .remarks(request.getRemarks())
                 .status(TripStatus.PLANNED)
+                .idempotencyKey(request.getIdempotencyKey())
+                .sourceLat(srcGeo.lat())
+                .sourceLng(srcGeo.lng())
+                .destLat(destGeo.lat())
+                .destLng(destGeo.lng())
+                .routePolyline(osrmResult != null ? osrmResult.polyline() : null)
                 .build();
 
         // Optional FKs
@@ -162,6 +198,18 @@ public class TripService {
         if (distanceActual != null) {
             trip.setDistanceActual(distanceActual);
         }
+
+        if (trip.getVehicle() != null && trip.getDestLat() != null && trip.getDestLng() != null) {
+            vehicleLocationRepository.findFirstByVehicleIdOrderByRecordedAtDesc(trip.getVehicle().getId())
+                    .ifPresent(loc -> {
+                        double dist = GeoUtils.haversine(loc.getLatitude(), loc.getLongitude(), trip.getDestLat(),
+                                trip.getDestLng());
+                        if (dist >= 5.0) {
+                            notificationService.sendEarlyCompletionAlert(trip, dist);
+                        }
+                    });
+        }
+
         addEvent(trip, TripEventType.TRIP_COMPLETED, "Trip completed");
 
         return mapToResponse(tripRepository.save(trip), false);

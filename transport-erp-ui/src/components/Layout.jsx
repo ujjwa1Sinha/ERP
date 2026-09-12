@@ -6,7 +6,7 @@ import {
     HiOutlineViewGrid, HiOutlineOfficeBuilding, HiOutlineTruck,
     HiOutlineUserGroup, HiOutlineLink, HiOutlineClipboardList,
     HiOutlineUsers, HiOutlineLogout, HiMenu, HiX,
-    HiOutlineSun, HiOutlineMoon
+    HiOutlineSun, HiOutlineMoon, HiOutlineLocationMarker
 } from 'react-icons/hi';
 
 // Each nav item can have a `requiredPermission` — if absent, all users see it
@@ -18,8 +18,10 @@ const navItems = [
     { path: '/vehicles', label: 'Vehicles', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
+    { path: '/live-map', label: 'Live Map', icon: HiOutlineLocationMarker, requiredPermission: 'TRIP_VIEW' },
     { path: '/trips', label: 'Trips', icon: HiOutlineClipboardList, requiredPermission: 'TRIP_VIEW' },
     { path: '/assignments', label: 'Assignments', icon: HiOutlineLink, requiredPermission: 'ASSIGNMENT_VIEW' },
+    { path: '/driver-tracking', label: 'Driver Tracker', icon: HiOutlineLocationMarker },
     { section: 'Administration' },
     { path: '/users', label: 'Users', icon: HiOutlineUsers, requiredPermission: 'USER_VIEW' },
 ];
@@ -32,6 +34,8 @@ const pageTitles = {
     '/trips': 'Trips',
     '/assignments': 'Assignments',
     '/users': 'User Management',
+    '/live-map': 'Live Tracker Map',
+    '/driver-tracking': 'Driver Signal Portal',
 };
 
 export default function Layout() {
