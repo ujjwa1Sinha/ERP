@@ -33,9 +33,15 @@ export function AuthProvider({ children }) {
         return userData;
     };
 
-    const logout = () => {
-        localStorage.clear();
-        setUser(null);
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error('Safe logout failed natively:', error);
+        } finally {
+            localStorage.clear();
+            setUser(null);
+        }
     };
 
     const hasPermission = (permission) => {

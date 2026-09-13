@@ -45,6 +45,15 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Token refreshed", response));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(jakarta.servlet.http.HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            authService.logout(bearerToken.substring(7));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Successfully logged out", null));
+    }
+
     // ── User Management ────────────────────────────────────
 
     @GetMapping("/users")

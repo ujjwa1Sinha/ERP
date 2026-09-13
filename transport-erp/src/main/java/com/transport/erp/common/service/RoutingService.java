@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.cache.annotation.Cacheable;
 import java.math.BigDecimal;
 
 @Service
@@ -18,6 +19,7 @@ public class RoutingService {
 
     private final RestTemplate restTemplate;
 
+    @Cacheable(value = "osrmRoutes", key = "#sourceLat + '_' + #sourceLng + '_' + #destLat + '_' + #destLng")
     public OsrmResult getOsrmPolyline(BigDecimal sourceLat, BigDecimal sourceLng, BigDecimal destLat,
             BigDecimal destLng) {
         try {

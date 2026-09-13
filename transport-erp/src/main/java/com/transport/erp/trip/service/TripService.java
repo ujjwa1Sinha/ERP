@@ -26,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -48,11 +49,19 @@ public class TripService {
     private final RoutingService routingService;
     private final NotificationService notificationService;
     private final VehicleLocationRepository vehicleLocationRepository;
+    private final StringRedisTemplate stringRedisTemplate;
 
     // ────────────────────────────── CREATE ──────────────────────────────
 
     @Transactional
     public TripResponse createTrip(TripRequest request) {
+        Boolean isIdempotent = stringRedisTemplate.opsForValue().setIfAbsent("idemp:" + request.getIdempotencyKey(),
+                "1", java.time.Duration.ofMinutes(10));
+        if (Boolean.FALSE.equals(isIdempotent)) {
+            throw new com.transport.erp.common.exception.DuplicateResourceException("Trip", "idempotencyKey",
+                    request.getIdempotencyKey());
+        }
+
         GeocodingService.GeoResult srcGeo = geocodingService.validateAndGeocode(request.getSource());
         if (srcGeo == null) {
             throw new IllegalArgumentException(

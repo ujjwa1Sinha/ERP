@@ -20,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +36,7 @@ public class VehicleService {
         private final VehicleTypeRepository vehicleTypeRepository;
         private final SecurityService securityService;
 
+        @CacheEvict(value = "vehiclesByBranch", allEntries = true)
         @Transactional
         public VehicleResponse createVehicle(VehicleRequest request) {
                 if (vehicleRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
@@ -121,6 +124,7 @@ public class VehicleService {
                 }
         }
 
+        @Cacheable(value = "vehiclesByBranch", key = "#branchId")
         @Transactional(readOnly = true)
         public List<VehicleResponse> getVehiclesByBranch(UUID branchId) {
                 return vehicleRepository.findByBranchId(branchId).stream()
@@ -128,6 +132,7 @@ public class VehicleService {
                                 .collect(Collectors.toList());
         }
 
+        @CacheEvict(value = "vehiclesByBranch", allEntries = true)
         @Transactional
         public VehicleResponse updateVehicle(UUID id, VehicleRequest request) {
                 Vehicle vehicle = vehicleRepository.findById(id)
@@ -154,7 +159,9 @@ public class VehicleService {
                 vehicle.setEngineNumber(request.getEngineNumber());
                 vehicle.setGpsDeviceId(request.getGpsDeviceId());
                 vehicle.setInsuranceExpiry(request.getInsuranceExpiry());
-                vehicle.setInsuranceFileUrl(request.getInsuranceFileUrl());
+                if (request.getInsuranceFileUrl() != null) {
+                        vehicle.setInsuranceFileUrl(request.getInsuranceFileUrl());
+                }
                 vehicle.setFitnessExpiry(request.getFitnessExpiry());
                 vehicle.setPermitExpiry(request.getPermitExpiry());
                 vehicle.setPollutionExpiry(request.getPollutionExpiry());
@@ -170,6 +177,7 @@ public class VehicleService {
                 return mapToResponse(vehicleRepository.save(vehicle));
         }
 
+        @CacheEvict(value = "vehiclesByBranch", allEntries = true)
         @Transactional
         public void decommissionVehicle(UUID id) {
                 Vehicle vehicle = vehicleRepository.findById(id)

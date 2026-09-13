@@ -10,6 +10,7 @@ import com.transport.erp.branch.repository.BranchRepository;
 import com.transport.erp.common.exception.DuplicateResourceException;
 import com.transport.erp.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,7 @@ public class AuthService {
         private final PasswordEncoder passwordEncoder;
         private final JwtTokenProvider jwtTokenProvider;
         private final com.transport.erp.auth.security.SecurityService securityService;
+        private final StringRedisTemplate stringRedisTemplate;
 
         public AuthResponse login(LoginRequest request) {
                 Authentication authentication = authenticationManager.authenticate(
@@ -100,6 +102,17 @@ public class AuthService {
                                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
                 return buildAuthResponse(newAccessToken, newRefreshToken, user);
+        }
+
+        public void logout(String token) {
+                if (jwtTokenProvider.validateToken(token)) {
+                        java.util.Date expiration = jwtTokenProvider.getExpirationDateFromToken(token);
+                        long diff = expiration.getTime() - System.currentTimeMillis();
+                        if (diff > 0) {
+                                stringRedisTemplate.opsForValue().set("blacklist:" + token, "1",
+                                                java.time.Duration.ofMillis(diff));
+                        }
+                }
         }
 
         @Transactional
