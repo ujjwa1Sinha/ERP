@@ -46,4 +46,14 @@ public interface DriverAssignmentRepository extends JpaRepository<DriverAssignme
         List<DriverAssignment> findAllReleasedAssignmentsByBranch(@Param("branchId") UUID branchId);
 
         List<DriverAssignment> findByTripId(UUID tripId);
+
+        @Query("SELECT COUNT(da) > 0 FROM DriverAssignment da WHERE da.driver.id = :driverId " +
+                        "AND da.assignedAt <= :endTime AND (da.releasedAt IS NULL OR da.releasedAt >= :startTime)")
+        boolean hasOverlappingAssignmentForDriver(@Param("driverId") UUID driverId,
+                        @Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+        @Query("SELECT COUNT(da) > 0 FROM DriverAssignment da WHERE da.vehicle.id = :vehicleId " +
+                        "AND da.assignedAt <= :endTime AND (da.releasedAt IS NULL OR da.releasedAt >= :startTime)")
+        boolean hasOverlappingAssignmentForVehicle(@Param("vehicleId") UUID vehicleId,
+                        @Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
 }

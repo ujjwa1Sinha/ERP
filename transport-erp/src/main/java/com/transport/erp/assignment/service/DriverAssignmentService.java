@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.transport.erp.trip.repository.TripRepository;
 import com.transport.erp.auth.security.SecurityService;
 
 @Service
@@ -29,6 +30,7 @@ public class DriverAssignmentService {
         private final DriverRepository driverRepository;
         private final VehicleRepository vehicleRepository;
         private final SecurityService securityService;
+        private final TripRepository tripRepository;
 
         @Transactional
         public AssignmentResponse assignDriverToVehicle(AssignmentRequest request) {
@@ -59,6 +61,20 @@ public class DriverAssignmentService {
                                                                         + existing.getDriver().getName()
                                                                         + "'. Please release the current assignment first.");
                                 });
+
+                Instant now = Instant.now();
+
+                // ── Conflict check 3: Driver has a future or active trip ─────────────────
+                if (tripRepository.hasFutureOrActiveTripForDriver(driver.getId(), now)) {
+                        throw new IllegalArgumentException("Driver '" + driver.getName()
+                                        + "' has an active or planned trip and cannot be assigned.");
+                }
+
+                // ── Conflict check 4: Vehicle has a future or active trip ─────────────────
+                if (tripRepository.hasFutureOrActiveTripForVehicle(vehicle.getId(), now)) {
+                        throw new IllegalArgumentException("Vehicle '" + vehicle.getRegistrationNumber()
+                                        + "' has an active or planned trip and cannot be assigned.");
+                }
 
                 DriverAssignment assignment = DriverAssignment.builder()
                                 .driver(driver)

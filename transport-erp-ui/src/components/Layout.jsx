@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useInactivityLogout from '../hooks/useInactivityLogout';
 import {
     HiOutlineViewGrid, HiOutlineOfficeBuilding, HiOutlineTruck,
-    HiOutlineUserGroup, HiOutlineLink,
-    HiOutlineUsers, HiOutlineLogout, HiMenu, HiX
+    HiOutlineUserGroup, HiOutlineLink, HiOutlineClipboardList,
+    HiOutlineUsers, HiOutlineLogout, HiMenu, HiX,
+    HiOutlineSun, HiOutlineMoon, HiOutlineLocationMarker
 } from 'react-icons/hi';
 
 // Each nav item can have a `requiredPermission` — if absent, all users see it
@@ -17,7 +18,10 @@ const navItems = [
     { path: '/vehicles', label: 'Vehicles', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
+    { path: '/live-map', label: 'Live Map', icon: HiOutlineLocationMarker, requiredPermission: 'TRIP_VIEW' },
+    { path: '/trips', label: 'Trips', icon: HiOutlineClipboardList, requiredPermission: 'TRIP_VIEW' },
     { path: '/assignments', label: 'Assignments', icon: HiOutlineLink, requiredPermission: 'ASSIGNMENT_VIEW' },
+    { path: '/driver-tracking', label: 'Driver Tracker', icon: HiOutlineLocationMarker },
     { section: 'Administration' },
     { path: '/users', label: 'Users', icon: HiOutlineUsers, requiredPermission: 'USER_VIEW' },
 ];
@@ -27,8 +31,11 @@ const pageTitles = {
     '/branches': 'Branches',
     '/vehicles': 'Vehicles',
     '/drivers': 'Drivers',
+    '/trips': 'Trips',
     '/assignments': 'Assignments',
     '/users': 'User Management',
+    '/live-map': 'Live Tracker Map',
+    '/driver-tracking': 'Driver Signal Portal',
 };
 
 export default function Layout() {
@@ -37,8 +44,18 @@ export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showWarning, setShowWarning] = useState(false);
     const [countdown, setCountdown] = useState(60);
+    const [theme, setTheme] = useState(localStorage.getItem('app-theme') || 'dark');
     const pageTitle = pageTitles[location.pathname] || 'Central Transport';
     const initials = user?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('app-theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
 
     const handleWarn = (secondsLeft) => {
         setShowWarning(true);
@@ -161,6 +178,9 @@ export default function Layout() {
                         <h2>{pageTitle}</h2>
                     </div>
                     <div className="topbar-right">
+                        <button className="btn btn-ghost btn-icon" onClick={toggleTheme} title="Toggle Theme">
+                            {theme === 'dark' ? <HiOutlineSun size={20} /> : <HiOutlineMoon size={20} />}
+                        </button>
                         <button className="btn btn-ghost" onClick={logout} title="Logout">
                             <HiOutlineLogout size={18} />
                             Logout

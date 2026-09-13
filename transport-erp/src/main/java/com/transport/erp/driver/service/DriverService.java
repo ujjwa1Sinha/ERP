@@ -20,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class DriverService {
     private final BranchRepository branchRepository;
     private final SecurityService securityService;
 
+    @CacheEvict(value = "driversByBranch", allEntries = true)
     @Transactional
     public DriverResponse createDriver(DriverRequest request) {
         if (request.getEmployeeCode() != null && driverRepository.existsByEmployeeCode(request.getEmployeeCode())) {
@@ -112,6 +115,7 @@ public class DriverService {
         return mapToResponse(driver);
     }
 
+    @Cacheable(value = "driversByBranch", key = "#branchId")
     @Transactional(readOnly = true)
     public List<DriverResponse> getDriversByBranch(UUID branchId) {
         return driverRepository.findByBranchId(branchId).stream()
@@ -142,6 +146,7 @@ public class DriverService {
         }
     }
 
+    @CacheEvict(value = "driversByBranch", allEntries = true)
     @Transactional
     public DriverResponse updateDriver(UUID id, DriverRequest request) {
         Driver driver = driverRepository.findById(id)
@@ -188,6 +193,7 @@ public class DriverService {
         return mapToResponse(driverRepository.save(driver));
     }
 
+    @CacheEvict(value = "driversByBranch", allEntries = true)
     @Transactional
     public void updateDriverStatus(UUID id, String status) {
         Driver driver = driverRepository.findById(id)
@@ -196,6 +202,7 @@ public class DriverService {
         driverRepository.save(driver);
     }
 
+    @CacheEvict(value = "driversByBranch", allEntries = true)
     @Transactional
     public void deleteDriver(UUID id) {
         Driver driver = driverRepository.findById(id)
