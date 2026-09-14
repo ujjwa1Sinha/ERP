@@ -96,3 +96,7 @@ brevo:
       email: ${BREVO_SENDER_EMAIL:ujjwals5801@gmail.com}
     recipient:
       email: ${BREVO_RECIPIENT_EMAIL:fill_me_out@example.com}
+
+geoapify:
+  api:
+    key: ${GEOAPIFY_API_KEY:dummy-key}

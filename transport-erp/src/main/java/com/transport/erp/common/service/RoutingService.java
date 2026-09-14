@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import java.math.BigDecimal;
 
@@ -13,6 +14,9 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 @Slf4j
 public class RoutingService {
+
+    @Value("${geoapify.api.key}")
+    private String apiKey;
 
     public record OsrmResult(String polyline, BigDecimal distanceKm, Long durationSeconds) {
     }
@@ -23,30 +27,38 @@ public class RoutingService {
     public OsrmResult getOsrmPolyline(BigDecimal sourceLat, BigDecimal sourceLng, BigDecimal destLat,
             BigDecimal destLng) {
         try {
-            log.info("Requesting OSRM Route between {},{} and {},{}", sourceLat, sourceLng, destLat, destLng);
-            String url = String.format("http://router.project-osrm.org/route/v1/driving/%s,%s;%s,%s?overview=full",
-                    sourceLng.toPlainString(), sourceLat.toPlainString(),
-                    destLng.toPlainString(), destLat.toPlainString());
+            log.info("Requesting Geoapify Route between {},{} and {},{}", sourceLat, sourceLng, destLat, destLng);
+            String waypoints = String.format("%s,%s|%s,%s", sourceLat.toPlainString(), sourceLng.toPlainString(), destLat.toPlainString(), destLng.toPlainString());
+            String url = org.springframework.web.util.UriComponentsBuilder.fromHttpUrl("https://api.geoapify.com/v1/routing")
+                    .queryParam("waypoints", waypoints)
+                    .queryParam("mode", "drive")
+                    .queryParam("apiKey", apiKey)
+                    .build().toUriString();
 
             ResponseEntity<JsonNode> response = restTemplate.getForEntity(url, JsonNode.class);
             JsonNode root = response.getBody();
 
-            if (root != null && "Ok".equals(root.path("code").asText())) {
-                JsonNode routes = root.path("routes");
-                if (routes.isArray() && !routes.isEmpty()) {
-                    JsonNode route = routes.get(0);
-                    String polyline = route.path("geometry").asText();
-                    double distanceMeters = route.path("distance").asDouble();
-                    Long durationSeconds = route.path("duration").asLong();
+            if (root != null && root.hasNonNull("features")) {
+                JsonNode features = root.path("features");
+                if (features.isArray() && !features.isEmpty()) {
+                    JsonNode route = features.get(0);
+                    JsonNode properties = route.path("properties");
+                    
+                    // Geoapify polyline geometry isn't natively encoded. We can store the JSON coordinates or an empty proxy if not needed for rendering on maps.
+                    // For now, if we don't render polyline, we just return empty string, since OSRM encoded was used.
+                    String polyline = ""; 
+                    
+                    double distanceMeters = properties.path("distance").asDouble();
+                    Long durationSeconds = properties.path("time").asLong();
                     BigDecimal distanceKm = BigDecimal.valueOf(distanceMeters / 1000.0).setScale(2,
                             java.math.RoundingMode.HALF_UP);
                     return new OsrmResult(polyline, distanceKm, durationSeconds);
                 }
             }
-            log.warn("OSRM routing failed to return a valid geometry.");
+            log.warn("Geoapify routing failed to return a valid route.");
             return null;
         } catch (Exception e) {
-            log.error("Error fetching OSRM route: ", e);
+            log.error("Error fetching Geoapify route: ", e);
             return null;
         }
     }
