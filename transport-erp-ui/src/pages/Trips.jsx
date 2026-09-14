@@ -112,36 +112,79 @@ export default function Trips() {
         e.preventDefault();
         if (isSubmitting) return;
         setIsSubmitting(true);
-        try {
-            const payload = { ...form };
-            // convert date-local to ISO
-            if (payload.plannedDeparture) payload.plannedDeparture = new Date(payload.plannedDeparture).toISOString();
-            if (payload.plannedArrival) payload.plannedArrival = new Date(payload.plannedArrival).toISOString();
-            // clean empty strings
-            Object.keys(payload).forEach(k => { if (payload[k] === '') delete payload[k]; });
 
+        const payload = { ...form };
+        if (payload.plannedDeparture) payload.plannedDeparture = new Date(payload.plannedDeparture).toISOString();
+        if (payload.plannedArrival) payload.plannedArrival = new Date(payload.plannedArrival).toISOString();
+        Object.keys(payload).forEach(k => { if (payload[k] === '') delete payload[k]; });
+
+        const optimisticTrip = {
+            ...payload,
+            id: `temp-${Date.now()}`,
+            tripNumber: 'TRX-PENDING',
+            status: 'PLANNED'
+        };
+
+        const originalTrips = [...trips];
+        setTrips([optimisticTrip, ...trips]);
+        setShowCreateModal(false);
+        setForm(INITIAL_FORM);
+
+        try {
             await api.post('/trips', payload);
             toast.success('Trip created');
-            setShowCreateModal(false);
-            setForm(INITIAL_FORM);
             loadTrips();
             loadStats();
         } catch (err) {
-            toast.error(err?.response?.data?.message || 'Failed to create trip (or duplicate encountered)');
+            toast.error(err?.response?.data?.message || 'Failed to create trip');
+            setTrips(originalTrips);
+            setShowCreateModal(true);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleLifecycleAction = async (tripId, action, body = {}) => {
+        // Optimistic update for status changes
+        const isStatusChange = ['start', 'complete', 'cancel'].includes(action);
+        let originalTrips = [...trips];
+
+        if (isStatusChange) {
+            const statusMap = { 'start': 'STARTED', 'complete': 'COMPLETED', 'cancel': 'CANCELLED' };
+            setTrips(trips.map(t => t.id === tripId ? { ...t, status: statusMap[action] } : t));
+            if (selectedTrip && selectedTrip.id === tripId) {
+                setSelectedTrip({ ...selectedTrip, status: statusMap[action] });
+            }
+        }
+
         try {
             await api.patch(`/trips/${tripId}/${action}`, body);
-            toast.success(`Trip ${action.replace('-', ' ')} successfully`);
+            toast.success(`Trip updated`);
             loadTrips();
             loadStats();
             if (selectedTrip?.id === tripId) openDetail(tripId);
         } catch (err) {
-            toast.error(err?.response?.data?.message || `Failed to ${action} trip`);
+            toast.error(err?.response?.data?.message || `Failed to update trip`);
+            if (isStatusChange) {
+                setTrips(originalTrips);
+                if (selectedTrip?.id === tripId) openDetail(tripId);
+            }
+        }
+    };
+
+    const handleUpdateTimes = async (e) => {
+        e.preventDefault();
+        const payload = {
+            plannedDeparture: new Date(selectedTrip.plannedDeparture).toISOString(),
+            plannedArrival: new Date(selectedTrip.plannedArrival).toISOString()
+        };
+        try {
+            // Assuming endpoint exists for updating trips or patching
+            await api.put(`/trips/${selectedTrip.id}`, payload);
+            toast.success('Trip times updated');
+            loadTrips();
+        } catch (err) {
+            toast.error('Failed to update trip times');
         }
     };
 
@@ -364,18 +407,23 @@ export default function Trips() {
                                 </div>
                             )}
 
+                            {/* Edit Times (Replacing Assign buttons) */}
+                            {canCreate && !['COMPLETED', 'CANCELLED'].includes(selectedTrip.status) && (
+                                <form onSubmit={handleUpdateTimes} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, marginBottom: 20, alignItems: 'end' }}>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label">New Planned Departure</label>
+                                        <input className="form-input" type="datetime-local" value={selectedTrip.plannedDeparture?.slice(0, 16) || ''} onChange={e => setSelectedTrip({ ...selectedTrip, plannedDeparture: e.target.value })} />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label">New Planned Arrival</label>
+                                        <input className="form-input" type="datetime-local" value={selectedTrip.plannedArrival?.slice(0, 16) || ''} onChange={e => setSelectedTrip({ ...selectedTrip, plannedArrival: e.target.value })} />
+                                    </div>
+                                    <button type="submit" className="btn btn-primary" style={{ height: 42 }}>Save Times</button>
+                                </form>
+                            )}
+
                             {/* Lifecycle actions */}
                             <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-                                {canAssign && ['PLANNED', 'ASSIGNED'].includes(selectedTrip.status) && (
-                                    <>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => { loadOptions(); promptAssign('vehicle'); }}>
-                                            <HiTruck size={14} /> Assign Vehicle
-                                        </button>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => { loadOptions(); promptAssign('driver'); }}>
-                                            <HiOutlineUserGroup size={14} /> Assign Driver
-                                        </button>
-                                    </>
-                                )}
                                 {canCreate && selectedTrip.status === 'ASSIGNED' && (
                                     <button className="btn btn-primary btn-sm" onClick={() => handleLifecycleAction(selectedTrip.id, 'start')}>
                                         <HiPlay size={14} /> Start Trip
@@ -432,27 +480,7 @@ export default function Trips() {
     // ────────────────── PROMPT HELPERS ──────────────────
 
     function promptAssign(type) {
-        const label = type === 'vehicle' ? 'vehicle' : 'driver';
-        const list = type === 'vehicle' ? vehicles : drivers;
-        const options = list.map(item =>
-            type === 'vehicle'
-                ? `${item.registrationNumber} (${item.make || ''})`
-                : `${item.name} (${item.employeeCode || '—'})`
-        );
-
-        const choice = prompt(
-            `Select ${label} index (1-${list.length}):\n` +
-            options.map((o, i) => `${i + 1}. ${o}`).join('\n')
-        );
-        if (!choice) return;
-        const idx = parseInt(choice) - 1;
-        if (idx < 0 || idx >= list.length) { toast.error('Invalid selection'); return; }
-
-        const id = list[idx].id;
-        handleLifecycleAction(selectedTrip.id,
-            type === 'vehicle' ? 'assign-vehicle' : 'assign-driver',
-            type === 'vehicle' ? { vehicleId: id } : { driverId: id }
-        );
+        // Obsoleted
     }
 }
 

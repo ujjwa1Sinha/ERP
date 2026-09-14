@@ -118,8 +118,8 @@ public class DriverController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('DRIVER_EDIT')")
-    public ResponseEntity<ApiResponse<Void>> deleteDriver(@PathVariable UUID id) {
-        driverService.deleteDriver(id);
+    public ResponseEntity<ApiResponse<Void>> deleteDriver(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean force) {
+        driverService.deleteDriver(id, force);
         return ResponseEntity.ok(ApiResponse.success("Driver deleted successfully", null));
     }
 

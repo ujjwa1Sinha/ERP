@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiX, HiUserAdd } from 'react-icons/hi';
+import { formatPhone, formatName } from '../utils/validation';
 
 const availableRoles = [
     'SUPER_ADMIN', 'OWNER', 'BRANCH_ADMIN', 'FLEET_MANAGER', 'DISPATCHER',
@@ -62,12 +63,21 @@ export default function Users() {
 
     const handleCreate = async (e) => {
         e.preventDefault();
+
+        const originalUsers = [...users];
+        const optimisticUser = { ...form, id: `temp-${Date.now()}` };
+        setUsers([...users, optimisticUser]);
+        setShowModal(false);
+
         try {
             await api.post('/auth/register', form);
             toast.success('User created');
-            setShowModal(false);
             loadUsers();
-        } catch { /* handled */ }
+        } catch {
+            toast.error('Failed to create user');
+            setUsers(originalUsers);
+            setShowModal(true);
+        }
     };
 
     const handleUpdate = async (e) => {
@@ -80,12 +90,21 @@ export default function Users() {
         if (updateForm.roles.length) payload.roles = updateForm.roles;
         if (updateForm.branchId) payload.branchId = updateForm.branchId;
         payload.active = updateForm.active;
+
+        const originalUsers = [...users];
+        const optimisticUser = { ...editUser, ...payload, id: editUser.id };
+        setUsers(users.map(u => u.id === editUser.id ? optimisticUser : u));
+        setShowEditModal(false);
+
         try {
             await api.put(`/auth/users/${editUser.id}`, payload);
             toast.success('User updated');
-            setShowEditModal(false);
             loadUsers();
-        } catch { /* handled */ }
+        } catch {
+            toast.error('Failed to update user');
+            setUsers(originalUsers);
+            setShowEditModal(true);
+        }
     };
 
     const handleDeactivate = async (id) => {
@@ -97,8 +116,19 @@ export default function Users() {
         } catch { /* handled */ }
     };
 
-    const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-    const onUpdateChange = (e) => setUpdateForm({ ...updateForm, [e.target.name]: e.target.value });
+    const onChange = (e) => {
+        let value = e.target.value;
+        if (e.target.name === 'phone') value = formatPhone(value);
+        if (e.target.name === 'fullName') value = formatName(value);
+        setForm(prev => ({ ...prev, [e.target.name]: value }));
+    };
+
+    const onUpdateChange = (e) => {
+        let value = e.target.value;
+        if (e.target.name === 'phone') value = formatPhone(value);
+        if (e.target.name === 'fullName') value = formatName(value);
+        setUpdateForm(prev => ({ ...prev, [e.target.name]: value }));
+    };
 
     const toggleRole = (role, isUpdate = false) => {
         if (isUpdate) {
@@ -204,7 +234,7 @@ export default function Users() {
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Username *</label>
-                                        <input className="form-input" name="username" value={form.username} onChange={onChange} required />
+                                        <input className="form-input" name="username" value={form.username} onChange={onChange} maxLength={50} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Password *</label>
@@ -212,15 +242,15 @@ export default function Users() {
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Full Name *</label>
-                                        <input className="form-input" name="fullName" value={form.fullName} onChange={onChange} required />
+                                        <input className="form-input" name="fullName" value={form.fullName} onChange={onChange} maxLength={100} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Email *</label>
-                                        <input className="form-input" name="email" type="email" value={form.email} onChange={onChange} required />
+                                        <input className="form-input" name="email" type="email" value={form.email} onChange={onChange} pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$" required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Phone</label>
-                                        <input className="form-input" name="phone" value={form.phone} onChange={onChange} />
+                                        <input className="form-input" name="phone" value={form.phone} onChange={onChange} maxLength={10} />
                                     </div>
                                     <div className="form-group full-width">
                                         <label className="form-label">Roles</label>
@@ -262,15 +292,15 @@ export default function Users() {
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Full Name</label>
-                                        <input className="form-input" name="fullName" value={updateForm.fullName} onChange={onUpdateChange} />
+                                        <input className="form-input" name="fullName" value={updateForm.fullName} onChange={onUpdateChange} maxLength={100} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Email</label>
-                                        <input className="form-input" name="email" type="email" value={updateForm.email} onChange={onUpdateChange} />
+                                        <input className="form-input" name="email" type="email" value={updateForm.email} onChange={onUpdateChange} pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$" />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Phone</label>
-                                        <input className="form-input" name="phone" value={updateForm.phone} onChange={onUpdateChange} />
+                                        <input className="form-input" name="phone" value={updateForm.phone} onChange={onUpdateChange} maxLength={10} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">New Password</label>

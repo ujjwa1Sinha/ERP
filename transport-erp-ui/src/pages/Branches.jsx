@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiX } from 'react-icons/hi';
+import LocationSelector from '../components/LocationSelector';
+import { formatPhone, formatPincode } from '../utils/validation';
 
-const emptyBranch = { name: '', code: '', address: '', city: '', state: '', pinCode: '', phone: '', email: '', contactPerson: '' };
+const emptyBranch = { name: '', code: '', address: '', city: '', state: '', countryCode: '', stateCode: '', pinCode: '', phone: '', email: '', contactPerson: '' };
 
 export default function Branches() {
     const { hasPermission } = useAuth();
@@ -29,17 +31,33 @@ export default function Branches() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Optimistic UI update
+        const isEdit = !!editId;
+        const originalBranches = [...branches];
+        const optimisticBranch = { ...form, id: editId || `temp-${Date.now()}` };
+
+        if (isEdit) {
+            setBranches(branches.map(b => b.id === editId ? optimisticBranch : b));
+        } else {
+            setBranches([...branches, optimisticBranch]);
+        }
+        setShowModal(false);
+
         try {
-            if (editId) {
+            if (isEdit) {
                 await api.put(`/branches/${editId}`, form);
                 toast.success('Branch updated');
             } else {
                 await api.post('/branches', form);
                 toast.success('Branch created');
             }
-            setShowModal(false);
             loadBranches();
-        } catch { /* handled */ }
+        } catch (err) {
+            toast.error('Failed to save branch');
+            setBranches(originalBranches); // Revert
+            setShowModal(true);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -51,7 +69,12 @@ export default function Branches() {
         } catch { /* handled */ }
     };
 
-    const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const onChange = (e) => {
+        let value = e.target.value;
+        if (e.target.name === 'phone') value = formatPhone(value);
+        if (e.target.name === 'pinCode') value = formatPincode(value);
+        setForm(prev => ({ ...prev, [e.target.name]: value }));
+    };
 
     if (loading) return <div className="page-loader"><div className="spinner"></div></div>;
 
@@ -138,14 +161,7 @@ export default function Branches() {
                                         <label className="form-label">Address</label>
                                         <input className="form-input" name="address" value={form.address} onChange={onChange} />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">City</label>
-                                        <input className="form-input" name="city" value={form.city} onChange={onChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">State</label>
-                                        <input className="form-input" name="state" value={form.state} onChange={onChange} />
-                                    </div>
+                                    <LocationSelector form={form} onChange={onChange} />
                                     <div className="form-group">
                                         <label className="form-label">Pin Code</label>
                                         <input className="form-input" name="pinCode" value={form.pinCode} onChange={onChange} />
