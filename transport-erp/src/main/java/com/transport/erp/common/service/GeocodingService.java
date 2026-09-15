@@ -2,10 +2,8 @@ package com.transport.erp.common.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
@@ -14,6 +12,9 @@ import java.math.BigDecimal;
 @Slf4j
 public class GeocodingService {
 
+    @Value("${geoapify.api.key}")
+    private String apiKey;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public record GeoResult(BigDecimal lat, BigDecimal lng) {
@@ -21,22 +22,19 @@ public class GeocodingService {
 
     public GeoResult validateAndGeocode(String address) {
         try {
-            log.info("Requesting Photon Geocode validation for Address: {}", address);
-            String url = org.springframework.web.util.UriComponentsBuilder.fromHttpUrl("https://photon.komoot.io/api/")
-                    .queryParam("q", address)
+            log.info("Requesting Geoapify Geocode for Address: {}", address);
+            String url = org.springframework.web.util.UriComponentsBuilder.fromHttpUrl("https://api.geoapify.com/v1/geocode/search")
+                    .queryParam("text", address)
                     .queryParam("limit", "1")
+                    .queryParam("apiKey", apiKey)
                     .build()
                     .toUriString();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent", "TransportERP-Phase7/1.0");
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            ResponseEntity<JsonNode> response = restTemplate.getForEntity(url, JsonNode.class);
             JsonNode root = response.getBody();
 
             if (root == null || !root.hasNonNull("features")) {
-                log.warn("Geocoding failed - Address unmatched on Photon.");
+                log.warn("Geocoding failed - Address unmatched on Geoapify.");
                 return null;
             }
 
@@ -48,9 +46,8 @@ public class GeocodingService {
 
             JsonNode topResult = features.get(0);
             JsonNode geometry = topResult.get("geometry");
-            JsonNode properties = topResult.get("properties");
 
-            if (geometry == null || properties == null) {
+            if (geometry == null) {
                 log.warn("Geocoding failed - Missing core geometric configurations.");
                 return null;
             }

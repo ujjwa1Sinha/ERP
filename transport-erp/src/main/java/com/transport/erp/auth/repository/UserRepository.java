@@ -1,6 +1,7 @@
 package com.transport.erp.auth.repository;
 
 import com.transport.erp.auth.domain.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,5 +19,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
+    @EntityGraph(attributePaths = { "branch" })
+    java.util.List<User> findAll();
+
+    @EntityGraph(attributePaths = { "branch" })
     java.util.List<User> findByBranchId(UUID branchId);
 }

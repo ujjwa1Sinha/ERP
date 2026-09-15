@@ -30,4 +30,33 @@ api.interceptors.response.use(
     }
 );
 
+// ── In-Memory Caching (Stale until mutation) ─────────────────────
+const apiCache = new Map();
+const clearCache = () => apiCache.clear();
+
+const originalGet = api.get;
+api.get = async (url, config = {}) => {
+    if (config.noCache) return originalGet.apply(api, [url, config]);
+
+    // Quick cache hit
+    if (apiCache.has(url)) {
+        return Promise.resolve(apiCache.get(url));
+    }
+
+    const response = await originalGet.apply(api, [url, config]);
+    // Cache the successful response
+    if (response?.data) apiCache.set(url, response);
+    return response;
+};
+
+// Global cache invalidation on any mutations
+const originalPost = api.post;
+api.post = async (...args) => { clearCache(); return originalPost.apply(api, args); };
+
+const originalPut = api.put;
+api.put = async (...args) => { clearCache(); return originalPut.apply(api, args); };
+
+const originalDelete = api.delete;
+api.delete = async (...args) => { clearCache(); return originalDelete.apply(api, args); };
+
 export default api;

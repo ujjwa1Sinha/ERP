@@ -40,16 +40,16 @@ export default function AddressAutocomplete({ label, name, value, onChange, plac
         const delayDebounceFn = setTimeout(async () => {
             setLoading(true);
             try {
-                const res = await axios.get(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+                // Ensure auth token is provided for local API call
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`/api/location/autocomplete?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
                 const formatted = res.data.features.map(f => {
                     const p = f.properties;
-                    let display = `${p.name || ''}`;
-                    if (p.city && p.city !== p.name) display += `, ${p.city}`;
-                    if (p.state && p.state !== p.city) display += `, ${p.state}`;
-                    if (p.country && p.country !== p.state) display += `, ${p.country}`;
-
                     return {
-                        display_name: display.replace(/^,\s*/, '').trim(),
+                        display_name: p.formatted || p.name || 'Unknown',
                         city: p.city || p.name || 'Unknown',
                         lat: f.geometry.coordinates[1],
                         lon: f.geometry.coordinates[0]

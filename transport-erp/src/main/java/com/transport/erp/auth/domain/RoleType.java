@@ -21,7 +21,8 @@ public enum RoleType {
                     "USER_VIEW", "USER_EDIT",
                     "DOCUMENT_VIEW", "DOCUMENT_EDIT",
                     "ASSIGNMENT_VIEW", "ASSIGNMENT_EDIT",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_IMPORT", "DATA_EXPORT");
         }
     },
 
@@ -38,7 +39,8 @@ public enum RoleType {
                     "USER_VIEW", "USER_EDIT",
                     "DOCUMENT_VIEW", "DOCUMENT_EDIT",
                     "ASSIGNMENT_VIEW", "ASSIGNMENT_EDIT",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_IMPORT", "DATA_EXPORT");
         }
     },
 
@@ -55,7 +57,8 @@ public enum RoleType {
                     "USER_VIEW", "USER_EDIT",
                     "DOCUMENT_VIEW", "DOCUMENT_EDIT",
                     "ASSIGNMENT_VIEW", "ASSIGNMENT_EDIT",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_IMPORT", "DATA_EXPORT");
         }
     },
 
@@ -70,7 +73,8 @@ public enum RoleType {
                     "BRANCH_VIEW",
                     "DOCUMENT_VIEW", "DOCUMENT_EDIT",
                     "ASSIGNMENT_VIEW", "ASSIGNMENT_EDIT",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_IMPORT", "DATA_EXPORT");
         }
     },
 
@@ -96,7 +100,8 @@ public enum RoleType {
                     "TRIP_VIEW",
                     "EXPENSE_VIEW", "EXPENSE_APPROVE",
                     "DOCUMENT_VIEW",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_EXPORT");
         }
     },
 
@@ -107,7 +112,8 @@ public enum RoleType {
                     "DRIVER_VIEW", "DRIVER_EDIT", "DRIVER_MEDICAL_VIEW",
                     "USER_VIEW", "USER_EDIT",
                     "DOCUMENT_VIEW", "DOCUMENT_EDIT",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_IMPORT", "DATA_EXPORT");
         }
     },
 
@@ -142,7 +148,8 @@ public enum RoleType {
                     "BRANCH_VIEW",
                     "DOCUMENT_VIEW",
                     "ASSIGNMENT_VIEW",
-                    "REPORT_VIEW");
+                    "REPORT_VIEW",
+                    "DATA_EXPORT");
         }
     };
 

@@ -2,6 +2,7 @@ package com.transport.erp.assignment.repository;
 
 import com.transport.erp.assignment.domain.DriverAssignment;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -16,8 +17,10 @@ import java.util.UUID;
 @Repository
 public interface DriverAssignmentRepository extends JpaRepository<DriverAssignment, UUID> {
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         List<DriverAssignment> findByDriverId(UUID driverId);
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         List<DriverAssignment> findByVehicleId(UUID vehicleId);
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -33,18 +36,23 @@ public interface DriverAssignmentRepository extends JpaRepository<DriverAssignme
         List<DriverAssignment> findAssignmentsAtTime(
                         @Param("vehicleId") UUID vehicleId, @Param("timestamp") Instant timestamp);
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NULL")
         List<DriverAssignment> findAllActiveAssignments();
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NULL AND da.vehicle.branch.id = :branchId")
         List<DriverAssignment> findAllActiveAssignmentsByBranch(@Param("branchId") UUID branchId);
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NOT NULL ORDER BY da.releasedAt DESC")
         List<DriverAssignment> findAllReleasedAssignments();
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         @Query("SELECT da FROM DriverAssignment da WHERE da.releasedAt IS NOT NULL AND da.vehicle.branch.id = :branchId ORDER BY da.releasedAt DESC")
         List<DriverAssignment> findAllReleasedAssignmentsByBranch(@Param("branchId") UUID branchId);
 
+        @EntityGraph(attributePaths = { "driver", "vehicle" })
         List<DriverAssignment> findByTripId(UUID tripId);
 
         @Query("SELECT COUNT(da) > 0 FROM DriverAssignment da WHERE da.driver.id = :driverId " +

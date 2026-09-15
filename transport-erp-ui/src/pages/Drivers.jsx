@@ -3,13 +3,17 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiX, HiSearch, HiUpload, HiDocumentText, HiEye, HiExclamation, HiTrash } from 'react-icons/hi';
+import LocationSelector from '../components/LocationSelector';
+import { formatPhone, formatPincode, formatName, getMaxDateFor18YearsOld } from '../utils/validation';
+import BulkImportModal from '../components/BulkImportModal';
+import ExportButtons from '../components/ExportButtons';
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg'];
 
 const emptyDriver = {
     employeeCode: '', name: '', phone: '', alternatePhone: '', dateOfBirth: '', joiningDate: '',
-    address: '', city: '', state: '', pinCode: '', aadharNumber: '', panNumber: '', bloodGroup: '',
+    address: '', city: '', state: '', countryCode: '', stateCode: '', pinCode: '', aadharNumber: '', panNumber: '', bloodGroup: '',
     branchId: '',
     // License (flat)
     licenseNumber: '', licenseType: 'HMV', licenseIssuingAuthority: '', licenseIssueDate: '', licenseExpiryDate: '',
@@ -31,6 +35,7 @@ export default function Drivers() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
 
     // License file state
     const [licenseFile, setLicenseFile] = useState(null);
@@ -78,7 +83,8 @@ export default function Drivers() {
             employeeCode: d.employeeCode || '', name: d.name || '', phone: d.phone || '',
             alternatePhone: d.alternatePhone || '', dateOfBirth: d.dateOfBirth || '',
             joiningDate: d.joiningDate || '', address: d.address || '', city: d.city || '',
-            state: d.state || '', pinCode: d.pinCode || '', aadharNumber: d.aadharNumber || '',
+            state: d.state || '', countryCode: d.countryCode || '', stateCode: d.stateCode || '',
+            pinCode: d.pinCode || '', aadharNumber: d.aadharNumber || '',
             panNumber: d.panNumber || '', bloodGroup: d.bloodGroup || '', branchId: d.branchId || '',
             // License
             licenseNumber: d.licenseNumber || '', licenseType: d.licenseType || 'HMV',
@@ -131,7 +137,22 @@ export default function Drivers() {
             await api.delete(`/drivers/${id}`);
             toast.success('Driver deleted');
             loadDrivers();
-        } catch { /* handled */ }
+        } catch (err) {
+            const status = err?.response?.status;
+            if (status === 400 || status === 409 || status === 500) {
+                if (confirm('This driver may be actively assigned to a trip or vehicle. Unassign them and forcefully delete?')) {
+                    try {
+                        await api.delete(`/drivers/${id}?force=true`);
+                        toast.success('Driver unassigned and deleted');
+                        loadDrivers();
+                    } catch (e) {
+                        toast.error(e?.response?.data?.message || 'Failed to force delete driver');
+                    }
+                }
+            } else {
+                toast.error('Failed to delete driver');
+            }
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -142,28 +163,52 @@ export default function Drivers() {
             return;
         }
         setSubmitting(true);
+        const isEdit = !!editId;
+        const originalDrivers = [...drivers];
+
+        // Construct the optimistic object since it's multipart
         const formData = new FormData();
-        // Send form fields as JSON blob
         const payload = { ...form };
         formData.append('driver', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
         if (licenseFile) formData.append('licenseFile', licenseFile);
 
+        // Optimistic UI change
+        const optimisticProfile = { ...form, id: editId || `temp-${Date.now()}` };
+        if (licenseFile) optimisticProfile.licenseFileUrl = URL.createObjectURL(licenseFile); // temporary URL
+
+        if (isEdit) {
+            setDrivers(drivers.map(d => d.id === editId ? optimisticProfile : d));
+        } else {
+            setDrivers([...drivers, optimisticProfile]);
+        }
+        setShowModal(false); // Close immediately
+
         try {
-            if (editId) {
+            if (isEdit) {
                 await api.put(`/drivers/${editId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Driver updated');
             } else {
                 await api.post('/drivers', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 toast.success('Driver created');
             }
-            setShowModal(false);
             loadDrivers();
-        } catch { /* handled */ } finally {
+        } catch (err) {
+            toast.error('Failed to save driver');
+            setDrivers(originalDrivers);
+            setShowModal(true);
+        } finally {
             setSubmitting(false);
         }
     };
 
-    const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const onChange = (e) => {
+        let value = e.target.value;
+        const phoneFields = ['phone', 'alternatePhone', 'ecPhone', 'ecAlternatePhone'];
+        if (phoneFields.includes(e.target.name)) value = formatPhone(value);
+        if (e.target.name === 'pinCode') value = formatPincode(value);
+        if (['name', 'ecName'].includes(e.target.name)) value = formatName(value);
+        setForm(prev => ({ ...prev, [e.target.name]: value }));
+    };
 
     if (loading) return <div className="page-loader"><div className="spinner"></div></div>;
 
@@ -184,6 +229,12 @@ export default function Drivers() {
                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
                         />
                     </div>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="drivers" />}
+                    {hasPermission('DATA_IMPORT') && (
+                        <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
+                            <HiUpload size={16} /> Import Excel
+                        </button>
+                    )}
                     {canEdit && (
                         <button id="create-driver-btn" className="btn btn-primary" onClick={openCreate}>
                             <HiPlus size={16} /> Add Driver
@@ -293,23 +344,23 @@ export default function Drivers() {
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Employee Code *</label>
-                                        <input className="form-input" name="employeeCode" value={form.employeeCode} onChange={onChange} required />
+                                        <input className="form-input" name="employeeCode" value={form.employeeCode} onChange={onChange} maxLength={20} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Full Name *</label>
-                                        <input className="form-input" name="name" value={form.name} onChange={onChange} required />
+                                        <input className="form-input" name="name" value={form.name} onChange={onChange} maxLength={100} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Phone *</label>
-                                        <input className="form-input" name="phone" value={form.phone} onChange={onChange} required />
+                                        <input className="form-input" name="phone" value={form.phone} onChange={onChange} maxLength={10} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Alternate Phone</label>
-                                        <input className="form-input" name="alternatePhone" value={form.alternatePhone} onChange={onChange} />
+                                        <input className="form-input" name="alternatePhone" value={form.alternatePhone} onChange={onChange} maxLength={10} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Date of Birth</label>
-                                        <input className="form-input" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={onChange} />
+                                        <input className="form-input" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={onChange} max={getMaxDateFor18YearsOld()} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Joining Date</label>
@@ -317,31 +368,24 @@ export default function Drivers() {
                                     </div>
                                     <div className="form-group full-width">
                                         <label className="form-label">Address</label>
-                                        <input className="form-input" name="address" value={form.address} onChange={onChange} />
+                                        <input className="form-input" name="address" value={form.address} onChange={onChange} maxLength={250} />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">City</label>
-                                        <input className="form-input" name="city" value={form.city} onChange={onChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">State</label>
-                                        <input className="form-input" name="state" value={form.state} onChange={onChange} />
-                                    </div>
+                                    <LocationSelector form={form} onChange={onChange} />
                                     <div className="form-group">
                                         <label className="form-label">Pin Code</label>
-                                        <input className="form-input" name="pinCode" value={form.pinCode} onChange={onChange} />
+                                        <input className="form-input" name="pinCode" value={form.pinCode} onChange={onChange} maxLength={6} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Aadhar Number</label>
-                                        <input className="form-input" name="aadharNumber" value={form.aadharNumber} onChange={onChange} />
+                                        <input className="form-input" name="aadharNumber" value={form.aadharNumber} onChange={onChange} maxLength={12} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">PAN Number</label>
-                                        <input className="form-input" name="panNumber" value={form.panNumber} onChange={onChange} />
+                                        <input className="form-input" name="panNumber" value={form.panNumber} onChange={onChange} maxLength={10} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Blood Group</label>
-                                        <input className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onChange} placeholder="e.g. B+" />
+                                        <input className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onChange} maxLength={5} placeholder="e.g. B+" />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Branch</label>
@@ -357,15 +401,15 @@ export default function Drivers() {
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">License Number</label>
-                                        <input className="form-input" name="licenseNumber" value={form.licenseNumber} onChange={onChange} />
+                                        <input className="form-input" name="licenseNumber" value={form.licenseNumber} onChange={onChange} maxLength={20} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">License Type</label>
-                                        <input className="form-input" name="licenseType" value={form.licenseType} onChange={onChange} placeholder="e.g. HMV" />
+                                        <input className="form-input" name="licenseType" value={form.licenseType} onChange={onChange} maxLength={20} placeholder="e.g. HMV" />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Issuing Authority</label>
-                                        <input className="form-input" name="licenseIssuingAuthority" value={form.licenseIssuingAuthority} onChange={onChange} />
+                                        <input className="form-input" name="licenseIssuingAuthority" value={form.licenseIssuingAuthority} onChange={onChange} maxLength={100} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Issue Date</label>
@@ -428,23 +472,23 @@ export default function Drivers() {
                                 <div className="form-grid">
                                     <div className="form-group">
                                         <label className="form-label">Contact Name</label>
-                                        <input className="form-input" name="ecName" value={form.ecName} onChange={onChange} />
+                                        <input className="form-input" name="ecName" value={form.ecName} onChange={onChange} maxLength={100} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Relationship</label>
-                                        <input className="form-input" name="ecRelationship" value={form.ecRelationship} onChange={onChange} />
+                                        <input className="form-input" name="ecRelationship" value={form.ecRelationship} onChange={onChange} maxLength={50} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Contact Phone</label>
-                                        <input className="form-input" name="ecPhone" value={form.ecPhone} onChange={onChange} />
+                                        <input className="form-input" name="ecPhone" value={form.ecPhone} onChange={onChange} maxLength={10} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Alternate Phone</label>
-                                        <input className="form-input" name="ecAlternatePhone" value={form.ecAlternatePhone} onChange={onChange} />
+                                        <input className="form-input" name="ecAlternatePhone" value={form.ecAlternatePhone} onChange={onChange} maxLength={10} />
                                     </div>
                                     <div className="form-group full-width">
                                         <label className="form-label">Address</label>
-                                        <input className="form-input" name="ecAddress" value={form.ecAddress} onChange={onChange} />
+                                        <input className="form-input" name="ecAddress" value={form.ecAddress} onChange={onChange} maxLength={250} />
                                     </div>
                                 </div>
 
@@ -459,6 +503,13 @@ export default function Drivers() {
                     </div>
                 </div>
             )}
+            <BulkImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                entityType="drivers"
+                entityLabel="Drivers"
+                onSuccess={loadDrivers}
+            />
         </div>
     );
 }

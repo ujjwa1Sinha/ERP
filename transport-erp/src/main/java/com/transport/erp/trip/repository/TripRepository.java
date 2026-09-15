@@ -4,6 +4,7 @@ import com.transport.erp.trip.domain.Trip;
 import com.transport.erp.trip.domain.TripStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,18 +17,34 @@ import java.util.UUID;
 @Repository
 public interface TripRepository extends JpaRepository<Trip, UUID> {
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
+        Page<Trip> findAll(Pageable pageable);
+
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         Optional<Trip> findByTripNumber(String tripNumber);
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         Page<Trip> findByStatus(TripStatus status, Pageable pageable);
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         java.util.List<Trip> findByStatusIn(java.util.List<TripStatus> statuses);
 
         Optional<Trip> findFirstByVehicleIdAndStatusOrderByActualArrivalDesc(UUID vehicleId, TripStatus status);
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         Page<Trip> findByVehicleId(UUID vehicleId, Pageable pageable);
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         Page<Trip> findByPrimaryDriverId(UUID driverId, Pageable pageable);
 
+        @EntityGraph(attributePaths = { "vehicle", "primaryDriver", "secondaryDriver", "sourceBranch",
+                        "destinationBranch" })
         @Query("SELECT t FROM Trip t WHERE t.plannedDeparture >= :from AND t.plannedDeparture <= :to")
         Page<Trip> findByDateRange(@Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
 

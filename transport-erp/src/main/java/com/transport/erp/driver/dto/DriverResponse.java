@@ -27,6 +27,8 @@ public class DriverResponse {
     private String city;
     private String state;
     private String pinCode;
+    private String aadharNumber;
+    private String panNumber;
     private String bloodGroup;
     private String licenseFileUrl;
     private UUID branchId;
