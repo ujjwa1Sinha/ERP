@@ -5,6 +5,7 @@ import com.transport.erp.vehicle.domain.VehicleStatus;
 import com.transport.erp.vehicle.domain.VehicleType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,12 +23,19 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
 
     boolean existsByRegistrationNumber(String registrationNumber);
 
+    @EntityGraph(attributePaths = { "branch", "vehicleType" })
+    Page<Vehicle> findAll(Pageable pageable);
+
+    @EntityGraph(attributePaths = { "branch", "vehicleType" })
     List<Vehicle> findByBranchId(UUID branchId);
 
+    @EntityGraph(attributePaths = { "branch", "vehicleType" })
     Page<Vehicle> findByBranchId(UUID branchId, Pageable pageable);
 
+    @EntityGraph(attributePaths = { "branch", "vehicleType" })
     Page<Vehicle> findByStatus(VehicleStatus status, Pageable pageable);
 
+    @EntityGraph(attributePaths = { "branch", "vehicleType" })
     Page<Vehicle> findByVehicleType(VehicleType vehicleType, Pageable pageable);
 
     @Query("SELECT v FROM Vehicle v WHERE v.insuranceExpiry <= :date OR v.fitnessExpiry <= :date " +

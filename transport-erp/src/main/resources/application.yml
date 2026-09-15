@@ -46,6 +46,10 @@ spring:
 
 server:
   port: 8081
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
 
 # App Configuration
 app:
@@ -53,7 +57,7 @@ app:
     dir: ./uploads/documents
 
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:default-jwt-secret-key-that-needs-to-be-at-least-256-bits-long-for-security}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
 
