@@ -57,7 +57,8 @@ app:
     dir: ./uploads/documents
 
   jwt:
-    secret: ${JWT_SECRET:default-jwt-secret-key-that-needs-to-be-at-least-256-bits-long-for-security}
+    # Secret must be base64 encoded and at least 256-bit (e.g. 32 bytes)
+    secret: ${JWT_SECRET:ZGVmYXVsdC1qd3Qtc2VjcmV0LWtleS12ZXJ5LWxvbmctYW5kLXNlY3VyZTEyMw==}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
 
