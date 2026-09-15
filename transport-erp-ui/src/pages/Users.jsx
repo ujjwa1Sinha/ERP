@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { HiPlus, HiPencil, HiTrash, HiX, HiUserAdd } from 'react-icons/hi';
+import { HiPlus, HiPencil, HiTrash, HiX, HiUserAdd, HiUpload } from 'react-icons/hi';
 import { formatPhone, formatName } from '../utils/validation';
+import BulkImportModal from '../components/BulkImportModal';
+import ExportButtons from '../components/ExportButtons';
 
 const availableRoles = [
     'SUPER_ADMIN', 'OWNER', 'BRANCH_ADMIN', 'FLEET_MANAGER', 'DISPATCHER',
@@ -29,6 +31,7 @@ export default function Users() {
     const [editUser, setEditUser] = useState(null);
     const [form, setForm] = useState({ ...emptyUser });
     const [updateForm, setUpdateForm] = useState({ ...emptyUpdate });
+    const [showImportModal, setShowImportModal] = useState(false);
 
     useEffect(() => { loadUsers(); loadBranches(); }, []);
 
@@ -153,11 +156,19 @@ export default function Users() {
                     <h2>User Management</h2>
                     <p>Manage system users and their roles</p>
                 </div>
-                {canEdit && (
-                    <button id="create-user-btn" className="btn btn-primary" onClick={openCreate}>
-                        <HiUserAdd size={16} /> Add User
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="users" />}
+                    {hasPermission('DATA_IMPORT') && (
+                        <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
+                            <HiUpload size={16} /> Import Excel
+                        </button>
+                    )}
+                    {canEdit && (
+                        <button id="create-user-btn" className="btn btn-primary" onClick={openCreate}>
+                            <HiUserAdd size={16} /> Add User
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="card">
@@ -346,6 +357,13 @@ export default function Users() {
                     </div>
                 </div>
             )}
+            <BulkImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                entityType="users"
+                entityLabel="Users"
+                onSuccess={loadUsers}
+            />
         </div>
     );
 }

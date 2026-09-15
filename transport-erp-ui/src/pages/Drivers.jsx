@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiX, HiSearch, HiUpload, HiDocumentText, HiEye, HiExclamation, HiTrash } from 'react-icons/hi';
 import LocationSelector from '../components/LocationSelector';
 import { formatPhone, formatPincode, formatName, getMaxDateFor18YearsOld } from '../utils/validation';
+import BulkImportModal from '../components/BulkImportModal';
+import ExportButtons from '../components/ExportButtons';
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg'];
@@ -33,6 +35,7 @@ export default function Drivers() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
 
     // License file state
     const [licenseFile, setLicenseFile] = useState(null);
@@ -226,6 +229,12 @@ export default function Drivers() {
                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
                         />
                     </div>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="drivers" />}
+                    {hasPermission('DATA_IMPORT') && (
+                        <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
+                            <HiUpload size={16} /> Import Excel
+                        </button>
+                    )}
                     {canEdit && (
                         <button id="create-driver-btn" className="btn btn-primary" onClick={openCreate}>
                             <HiPlus size={16} /> Add Driver
@@ -494,6 +503,13 @@ export default function Drivers() {
                     </div>
                 </div>
             )}
+            <BulkImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                entityType="drivers"
+                entityLabel="Drivers"
+                onSuccess={loadDrivers}
+            />
         </div>
     );
 }

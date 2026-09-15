@@ -209,16 +209,21 @@ public class DriverService {
     public void deleteDriver(UUID id, boolean force) {
         Driver driver = driverRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", "id", id));
-        
+
         if (force) {
             // First drop all assignment history
-            List<com.transport.erp.assignment.domain.DriverAssignment> assignments = driverAssignmentRepository.findByDriverId(id);
+            List<com.transport.erp.assignment.domain.DriverAssignment> assignments = driverAssignmentRepository
+                    .findByDriverId(id);
             if (!assignments.isEmpty()) {
                 driverAssignmentRepository.deleteAll(assignments);
             }
-            
+
             // Unassign from historical or active trips
-            List<com.transport.erp.trip.domain.Trip> trips = tripRepository.findAll(); // Not highly optimized, but effectively we'd need a specific query. Let's just catch them dynamically or query by driver.
+            List<com.transport.erp.trip.domain.Trip> trips = tripRepository.findAll(); // Not highly optimized, but
+                                                                                       // effectively we'd need a
+                                                                                       // specific query. Let's just
+                                                                                       // catch them dynamically or
+                                                                                       // query by driver.
             for (com.transport.erp.trip.domain.Trip trip : trips) {
                 boolean changed = false;
                 if (trip.getPrimaryDriver() != null && trip.getPrimaryDriver().getId().equals(id)) {
@@ -234,7 +239,7 @@ public class DriverService {
                 }
             }
         }
-        
+
         driverRepository.delete(driver);
     }
 
@@ -252,6 +257,8 @@ public class DriverService {
                 .city(driver.getCity())
                 .state(driver.getState())
                 .pinCode(driver.getPinCode())
+                .aadharNumber(driver.getAadharNumber())
+                .panNumber(driver.getPanNumber())
                 .bloodGroup(driver.getBloodGroup())
                 .licenseFileUrl(driver.getLicenseFileUrl())
                 .branchId(driver.getBranch() != null ? driver.getBranch().getId() : null)

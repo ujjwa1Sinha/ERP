@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { HiPlus, HiPencil, HiTrash, HiX } from 'react-icons/hi';
+import { HiPlus, HiPencil, HiTrash, HiX, HiUpload } from 'react-icons/hi';
 import LocationSelector from '../components/LocationSelector';
 import { formatPhone, formatPincode } from '../utils/validation';
+import BulkImportModal from '../components/BulkImportModal';
+import ExportButtons from '../components/ExportButtons';
 
 const emptyBranch = { name: '', code: '', address: '', city: '', state: '', countryCode: '', stateCode: '', pinCode: '', phone: '', email: '', contactPerson: '' };
 
@@ -16,6 +18,7 @@ export default function Branches() {
     const [showModal, setShowModal] = useState(false);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState({ ...emptyBranch });
+    const [showImportModal, setShowImportModal] = useState(false);
 
     useEffect(() => { loadBranches(); }, []);
 
@@ -85,11 +88,19 @@ export default function Branches() {
                     <h2>Branches</h2>
                     <p>Manage your depot locations</p>
                 </div>
-                {canEdit && (
-                    <button id="create-branch-btn" className="btn btn-primary" onClick={openCreate}>
-                        <HiPlus size={16} /> Add Branch
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="branches" />}
+                    {hasPermission('DATA_IMPORT') && (
+                        <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
+                            <HiUpload size={16} /> Import Excel
+                        </button>
+                    )}
+                    {canEdit && (
+                        <button id="create-branch-btn" className="btn btn-primary" onClick={openCreate}>
+                            <HiPlus size={16} /> Add Branch
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="card">
@@ -188,6 +199,13 @@ export default function Branches() {
                     </div>
                 </div>
             )}
+            <BulkImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                entityType="branches"
+                entityLabel="Branches"
+                onSuccess={loadBranches}
+            />
         </div>
     );
 }

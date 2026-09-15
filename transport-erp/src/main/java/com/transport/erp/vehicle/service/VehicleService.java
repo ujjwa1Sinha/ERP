@@ -44,6 +44,9 @@ public class VehicleService {
                                         request.getRegistrationNumber());
                 }
 
+                if (request.getVehicleType() == null || request.getVehicleType().isBlank()) {
+                        throw new IllegalArgumentException("vehicle_type is required");
+                }
                 VehicleType type = vehicleTypeRepository.findByName(request.getVehicleType().toUpperCase())
                                 .orElseThrow(() -> new ResourceNotFoundException("VehicleType", "name",
                                                 request.getVehicleType()));

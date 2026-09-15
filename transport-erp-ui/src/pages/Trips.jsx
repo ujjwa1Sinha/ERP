@@ -8,6 +8,7 @@ import {
     HiArrowRight, HiOutlineClock
 } from 'react-icons/hi';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import ExportButtons from '../components/ExportButtons';
 
 const STATUS_BADGE = {
     PLANNED: 'badge-blue',
@@ -220,11 +221,14 @@ export default function Trips() {
                     <h2>Trips</h2>
                     <p>Manage dispatch and trip lifecycle</p>
                 </div>
-                {canCreate && (
-                    <button id="create-trip-btn" className="btn btn-primary" onClick={openCreateModal}>
-                        <HiPlus size={16} /> New Trip
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="trips" />}
+                    {canCreate && (
+                        <button id="create-trip-btn" className="btn btn-primary" onClick={openCreateModal}>
+                            <HiPlus size={16} /> New Trip
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Stats cards */}

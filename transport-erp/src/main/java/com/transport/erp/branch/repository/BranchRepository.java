@@ -16,4 +16,6 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     List<Branch> findByActiveTrue();
 
     boolean existsByCode(String code);
+
+    Optional<Branch> findByNameIgnoreCase(String name);
 }

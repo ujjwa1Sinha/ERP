@@ -21,5 +21,7 @@ public enum PermissionType {
     DOCUMENT_EDIT,
     ASSIGNMENT_VIEW,
     ASSIGNMENT_EDIT,
-    REPORT_VIEW
+    REPORT_VIEW,
+    DATA_IMPORT,
+    DATA_EXPORT
 }

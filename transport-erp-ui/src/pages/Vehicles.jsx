@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { HiPlus, HiPencil, HiTrash, HiX, HiUpload, HiDocumentText, HiEye, HiExclamation } from 'react-icons/hi';
+import BulkImportModal from '../components/BulkImportModal';
+import ExportButtons from '../components/ExportButtons';
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
@@ -28,6 +30,7 @@ export default function Vehicles() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [submitting, setSubmitting] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
 
     // Insurance file state
     const [insuranceFile, setInsuranceFile] = useState(null);
@@ -162,11 +165,19 @@ export default function Vehicles() {
                     <h2>Vehicles</h2>
                     <p>Manage your fleet inventory</p>
                 </div>
-                {canEdit && (
-                    <button id="create-vehicle-btn" className="btn btn-primary" onClick={openCreate}>
-                        <HiPlus size={16} /> Add Vehicle
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {hasPermission('DATA_EXPORT') && <ExportButtons entityType="vehicles" />}
+                    {hasPermission('DATA_IMPORT') && (
+                        <button className="btn btn-secondary" onClick={() => setShowImportModal(true)}>
+                            <HiUpload size={16} /> Import Excel
+                        </button>
+                    )}
+                    {canEdit && (
+                        <button id="create-vehicle-btn" className="btn btn-primary" onClick={openCreate}>
+                            <HiPlus size={16} /> Add Vehicle
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="card">
@@ -378,6 +389,13 @@ export default function Vehicles() {
                     </div>
                 </div>
             )}
+            <BulkImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                entityType="vehicles"
+                entityLabel="Vehicles"
+                onSuccess={loadVehicles}
+            />
         </div>
     );
 }
