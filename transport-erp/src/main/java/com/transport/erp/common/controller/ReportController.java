@@ -180,7 +180,7 @@ public class ReportController {
                 "vehicle", "primary_driver", "planned_departure",
                 "planned_arrival", "distance_planned");
 
-        var trips = tripService.getAllTrips(0, 10000, "createdAt", null);
+        var trips = tripService.getAllTrips(0, 10000, "createdAt", null, null);
         List<Map<String, Object>> data = trips.getContent().stream()
                 .map(t -> {
                     Map<String, Object> row = new LinkedHashMap<>();

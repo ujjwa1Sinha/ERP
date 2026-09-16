@@ -38,10 +38,11 @@ public class TripController {
     @PreAuthorize("hasAuthority('TRIP_VIEW')")
     public ResponseEntity<ApiResponse<PagedResponse<TripResponse>>> getAllTrips(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(required = false) String status) {
-        PagedResponse<TripResponse> response = tripService.getAllTrips(page, size, sortBy, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID vehicleId) {
+        PagedResponse<TripResponse> response = tripService.getAllTrips(page, size, sortBy, status, vehicleId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

@@ -254,11 +254,13 @@ public class TripService {
     // ────────────────────────────── QUERIES ──────────────────────────────
 
     @Transactional(readOnly = true)
-    public PagedResponse<TripResponse> getAllTrips(int page, int size, String sortBy, String status) {
+    public PagedResponse<TripResponse> getAllTrips(int page, int size, String sortBy, String status, UUID vehicleId) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
         Page<Trip> tripPage;
 
-        if (status != null && !status.isBlank()) {
+        if (vehicleId != null) {
+            tripPage = tripRepository.findByVehicleId(vehicleId, pageable);
+        } else if (status != null && !status.isBlank()) {
             TripStatus ts = TripStatus.valueOf(status.toUpperCase());
             tripPage = tripRepository.findByStatus(ts, pageable);
         } else {

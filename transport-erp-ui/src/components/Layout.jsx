@@ -16,6 +16,7 @@ const navItems = [
     { section: 'Fleet Management' },
     { path: '/branches', label: 'Branches', icon: HiOutlineOfficeBuilding, requiredPermission: 'BRANCH_VIEW' },
     { path: '/vehicles', label: 'Vehicles', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
+    { path: '/fuel', label: 'Fuel', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
     { path: '/live-map', label: 'Live Map', icon: HiOutlineLocationMarker, requiredPermission: 'TRIP_VIEW' },
