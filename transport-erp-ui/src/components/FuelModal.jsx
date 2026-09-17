@@ -140,36 +140,36 @@ export default function FuelModal({ isOpen, onClose, onSuccess, initialData = nu
         }
     }, [formData.tripId, formData.vehicleId, trips]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setSubmitting(true);
-        try {
-            const payload = {
-                ...formData,
-                date: new Date(formData.date).toISOString(), // Ensure UTC Instant string
-                litres: parseFloat(formData.litres),
-                pricePerLitre: formData.pricePerLitre ? parseFloat(formData.pricePerLitre) : null,
-                totalAmount: parseFloat(formData.totalAmount),
-                odometerReading: formData.odometerReading ? parseFloat(formData.odometerReading) : null,
-            };
+        onClose(); // Optimistically close modal immediately
 
-            // Fix null driver/trip submission if unselected
-            if (!payload.driverId) payload.driverId = null;
-            if (!payload.tripId) payload.tripId = null;
+        const payload = {
+            ...formData,
+            date: new Date(formData.date).toISOString(), // Ensure UTC Instant string
+            litres: parseFloat(formData.litres),
+            pricePerLitre: formData.pricePerLitre ? parseFloat(formData.pricePerLitre) : null,
+            totalAmount: parseFloat(formData.totalAmount),
+            odometerReading: formData.odometerReading ? parseFloat(formData.odometerReading) : null,
+        };
 
-            if (formData.id) {
-                await api.put(`/fuel/${formData.id}`, payload);
-                toast.success('Fuel record updated successfully');
-            } else {
-                await api.post('/fuel', payload);
-                toast.success('Fuel record created successfully');
-            }
-            onSuccess();
-        } catch (error) {
+        // Fix null driver/trip submission if unselected
+        if (!payload.driverId) payload.driverId = null;
+        if (!payload.tripId) payload.tripId = null;
+
+        const request = formData.id
+            ? api.put(`/fuel/${formData.id}`, payload)
+            : api.post('/fuel', payload);
+
+        toast.promise(request, {
+            loading: 'Saving fuel record...',
+            success: 'Fuel record saved!',
+            error: 'Failed to save fuel record'
+        }).then(() => {
+            if (onSuccess) onSuccess();
+        }).catch(error => {
             console.error(error);
-        } finally {
-            setSubmitting(false);
-        }
+        });
     };
 
     if (!isOpen) return null;

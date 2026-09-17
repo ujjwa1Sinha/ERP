@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { FiPlus, FiTrash2, FiSearch, FiEdit2, FiMapPin } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit2 } from 'react-icons/fi';
 import api from '../services/api';
-import FuelModal from '../components/FuelModal';
+import MaintenanceModal from '../components/MaintenanceModal';
 import ExportButtons from '../components/ExportButtons';
 
-export default function Fuel() {
-    const [transactions, setTransactions] = useState([]);
+export default function Maintenance() {
+    const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedFuel, setSelectedFuel] = useState(null);
+    const [selectedRecord, setSelectedRecord] = useState(null);
 
-    const fetchTransactions = async () => {
+    const fetchRecords = async () => {
         try {
             setLoading(true);
-            const res = await api.get(`/fuel?page=${page}&size=10`);
-            setTransactions(res.data.data.content);
-            setTotalPages(res.data.data.totalPages);
+            const res = await api.get(`/maintenance?page=${page}&size=10`);
+            setRecords(res.data.data?.content || res.data?.content || []);
+            setTotalPages(res.data.data?.totalPages || res.data?.totalPages || 0);
         } catch (error) {
             console.error(error);
         } finally {
@@ -27,15 +27,15 @@ export default function Fuel() {
     };
 
     useEffect(() => {
-        fetchTransactions();
+        fetchRecords();
     }, [page]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this fuel record?')) return;
+        if (!window.confirm('Are you sure you want to delete this maintenance record?')) return;
         try {
-            await api.delete(`/fuel/${id}`);
-            toast.success('Fuel record deleted successfully');
-            fetchTransactions();
+            await api.delete(`/maintenance/${id}`);
+            toast.success('Maintenance record deleted successfully');
+            fetchRecords();
         } catch (error) {
             console.error(error);
         }
@@ -43,7 +43,7 @@ export default function Fuel() {
 
     const handleSuccess = () => {
         setIsModalOpen(false);
-        fetchTransactions();
+        fetchRecords();
     };
 
     if (loading) return <div className="page-loader"><div className="spinner"></div></div>;
@@ -52,73 +52,75 @@ export default function Fuel() {
         <div>
             <div className="page-header">
                 <div>
-                    <h2>Fuel Management</h2>
-                    <p>Track fleet fuel expenses and vehicle efficiency</p>
+                    <h2>Maintenance Management</h2>
+                    <p>Track vehicle servicing, repairs, and upcoming maintenance</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <ExportButtons entityType="fuel" />
+                    <ExportButtons entityType="maintenance" />
                     <button
-                        onClick={() => { setSelectedFuel(null); setIsModalOpen(true); }}
+                        onClick={() => { setSelectedRecord(null); setIsModalOpen(true); }}
                         className="btn btn-primary"
                     >
-                        <FiPlus size={16} /> Record Fuel
+                        <FiPlus size={16} /> Add Record
                     </button>
                 </div>
             </div>
 
             <div className="card">
                 <div className="table-wrapper">
-                    {transactions.length > 0 ? (
+                    {records.length > 0 ? (
                         <table>
                             <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Vehicle</th>
-                                    <th>Driver</th>
-                                    <th>Trip</th>
-                                    <th>Quantity</th>
-                                    <th>Total Amount</th>
+                                    <th>Type</th>
+                                    <th>Cost</th>
                                     <th>Odometer</th>
-                                    <th>Location</th>
+                                    <th>Vendor</th>
+                                    <th>Next Service</th>
                                     <th className="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {transactions.map((t) => (
+                                {records.map((t) => (
                                     <tr key={t.id}>
                                         <td>
-                                            {new Date(t.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                            {new Date(t.serviceDate).toLocaleDateString()}
                                         </td>
                                         <td style={{ fontWeight: 600 }}>
                                             {t.vehicleRegistrationNumber}
                                         </td>
                                         <td>
-                                            {t.driverName || '—'}
-                                        </td>
-                                        <td>
-                                            {t.tripRoute ? (
-                                                <div style={{ fontSize: 13 }}>
-                                                    <span style={{ fontWeight: 500, color: 'var(--blue-600)' }}>{t.tripRoute.split(' (')[0]}</span>
-                                                    <br />
-                                                    <span style={{ color: 'var(--gray-500)' }}>{t.tripRoute.substring(t.tripRoute.indexOf('('))}</span>
-                                                </div>
-                                            ) : '—'}
-                                        </td>
-                                        <td>
-                                            <div style={{ fontWeight: 600 }}>{t.litres} L</div>
-                                            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>@ ₹{t.pricePerLitre}/L</div>
+                                            <span style={{
+                                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px',
+                                                background: 'var(--blue-50)', color: 'var(--blue-600)',
+                                                border: '1px solid var(--blue-200)'
+                                            }}>
+                                                {t.maintenanceType}
+                                            </span>
                                         </td>
                                         <td style={{ fontWeight: 600 }}>
-                                            ₹{t.totalAmount}
+                                            ₹{t.cost}
                                         </td>
                                         <td>
                                             {t.odometerReading ? `${t.odometerReading} km` : '—'}
                                         </td>
                                         <td>
-                                            {t.location || t.fuelStation || '—'}
+                                            {t.vendor || '—'}
+                                        </td>
+                                        <td>
+                                            {t.nextServiceDate ? new Date(t.nextServiceDate).toLocaleDateString() : '—'}
                                         </td>
                                         <td className="text-right">
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => { setSelectedRecord(t); setIsModalOpen(true); }}
+                                                    className="btn btn-ghost btn-icon"
+                                                    title="Edit Record"
+                                                >
+                                                    <FiEdit2 size={16} />
+                                                </button>
                                                 <button
                                                     onClick={() => handleDelete(t.id)}
                                                     className="btn btn-ghost btn-icon"
@@ -135,9 +137,9 @@ export default function Fuel() {
                         </table>
                     ) : (
                         <div className="empty-state">
-                            <div className="empty-state-icon">⛽</div>
-                            <h4>No fuel records found</h4>
-                            <p>Click "Record Fuel" to add your first entry.</p>
+                            <div className="empty-state-icon">🔧</div>
+                            <h4>No maintenance records found</h4>
+                            <p>Click "Add Record" to add your first entry.</p>
                         </div>
                     )}
                 </div>
@@ -150,9 +152,9 @@ export default function Fuel() {
                 )}
             </div>
 
-            <FuelModal
+            <MaintenanceModal
                 isOpen={isModalOpen}
-                initialData={selectedFuel}
+                initialData={selectedRecord}
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={handleSuccess}
             />

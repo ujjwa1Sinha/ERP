@@ -6,7 +6,7 @@ import {
     HiOutlineViewGrid, HiOutlineOfficeBuilding, HiOutlineTruck,
     HiOutlineUserGroup, HiOutlineLink, HiOutlineClipboardList,
     HiOutlineUsers, HiOutlineLogout, HiMenu, HiX,
-    HiOutlineSun, HiOutlineMoon, HiOutlineLocationMarker
+    HiOutlineSun, HiOutlineMoon, HiOutlineLocationMarker, HiOutlineCog
 } from 'react-icons/hi';
 
 // Each nav item can have a `requiredPermission` — if absent, all users see it
@@ -16,6 +16,7 @@ const navItems = [
     { section: 'Fleet Management' },
     { path: '/branches', label: 'Branches', icon: HiOutlineOfficeBuilding, requiredPermission: 'BRANCH_VIEW' },
     { path: '/vehicles', label: 'Vehicles', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
+    { path: '/maintenance', label: 'Maintenance', icon: HiOutlineCog, requiredPermission: 'VEHICLE_VIEW' },
     { path: '/fuel', label: 'Fuel', icon: HiOutlineTruck, requiredPermission: 'VEHICLE_VIEW' },
     { path: '/drivers', label: 'Drivers', icon: HiOutlineUserGroup, requiredPermission: 'DRIVER_VIEW' },
     { section: 'Operations' },
@@ -31,6 +32,7 @@ const pageTitles = {
     '/': 'Dashboard',
     '/branches': 'Branches',
     '/vehicles': 'Vehicles',
+    '/maintenance': 'Maintenance',
     '/drivers': 'Drivers',
     '/trips': 'Trips',
     '/assignments': 'Assignments',

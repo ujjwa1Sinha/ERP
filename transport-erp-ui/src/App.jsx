@@ -10,6 +10,7 @@ const Branches = lazy(() => import('./pages/Branches'));
 const Vehicles = lazy(() => import('./pages/Vehicles'));
 const Drivers = lazy(() => import('./pages/Drivers'));
 const Fuel = lazy(() => import('./pages/Fuel'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
 const Documents = lazy(() => import('./pages/Documents'));
 const Assignments = lazy(() => import('./pages/Assignments'));
 const Trips = lazy(() => import('./pages/Trips'));
@@ -38,6 +39,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="branches" element={<Branches />} />
             <Route path="vehicles" element={<Vehicles />} />
+            <Route path="maintenance" element={<Maintenance />} />
             <Route path="drivers" element={<Drivers />} />
             <Route path="fuel" element={<Fuel />} />
             <Route path="documents" element={<Documents />} />
